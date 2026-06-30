@@ -3,11 +3,11 @@ Mining Automated Compliance Execution
 
 # Installation process
 
-## 1. Install Visual Studio Code
-## 2. Install Docker Desktop and run it
-## 3. Install Git
-## 4. Clone the repository and open in Visual Studio Code
-## 5. Click on "Open In Container" if no pop-up appears use Ctrl + Shift + P and search "Rebuild dev container clear cache"
+ 1. Install Visual Studio Code
+ 2. Install Docker Desktop and run it
+ 3. Install Git
+ 4. Clone the repository and open in Visual Studio Code
+ 5. Click on "Open In Container" if no pop-up appears use Ctrl + Shift + P and search "Rebuild dev container clear cache"
 
 
 # Quick verification checklist
