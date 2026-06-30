@@ -1,0 +1,25 @@
+
+{
+    "name": "MACE",
+
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+
+    "remoteUser": "vscode",
+
+    "overrideCommand": true,
+
+    "shutdownAction": "stopContainer",
+
+    "updateRemoteUserUID": true,
+
+    "postCreateCommand": "bash .devcontainer/init.sh",
+
+    "forwardPorts": [
+        8000,
+        5173,
+        5432
+    ]
+}
