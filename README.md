@@ -29,3 +29,7 @@ curl http://localhost:5173
 
 ## Database health
 pg_isready -h localhost -p 5432
+
+
+# Development Must Dos
+Switch to "development" branch when writing code, do not push/merge in "main" branch.
