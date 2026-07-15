@@ -29,3 +29,10 @@ curl http://localhost:5173
 
 ## Database health
 pg_isready -h localhost -p 5432
+
+## Module 3 Documentation
+
+Module 3 handles server-side PDF report generation and display of the generated reports in the React frontend.
+
+- Module 3 Software Design Document: `Module3_SDD.docx`
+- Module 3 Technical Design Document: `Module3_TDD.docx`
