@@ -31,6 +31,994 @@ curl http://localhost:5173
 pg_isready -h localhost -p 5432
 
 
+---
+
+# Module 1: Scheduled EC/FC Mining Clearance Scraper
+
+This README section contains the SDD and TDD for Module 1 only. It is written as GitHub Markdown text so it can be pasted directly into the repository `README.md` or submitted as a pull request without uploading Word `.docx` files.
+
+## Reference Links Used
+
+- [Atlassian - Software Design Document Tips and Best Practices](https://www.atlassian.com/work-management/knowledge-sharing/documentation/software-design-document)
+- [Medium - The Ultimate Guide to Writing a Great README.md for Your Project](https://medium.com/@kc_clintone/the-ultimate-guide-to-writing-a-great-readme-md-for-your-project-3d49c2023357)
+
+## Acronyms
+
+| Acronym | Meaning |
+|---|---|
+| EC | Environmental Clearance |
+| FC | Forest Clearance |
+| SDD | Software/System Design Document |
+| TDD | Technical Design Document |
+| UI | User Interface |
+| DB | Database |
+| DOM | Document Object Model |
+
+## Module Summary
+
+Module 1 is responsible for building a scheduled web scraper that collects Environmental Clearance and Forest Clearance data for mining-sector projects only. The target websites are assumed to be UI-only and JavaScript-rendered, meaning the module cannot depend on a public API. The scraper must open the pages like a browser, wait for the UI content to load, extract listing and detail records, filter the records to mining projects, normalize the extracted fields, and keep a local database updated through repeated scheduled runs.
+
+This module is important because the rest of the application depends on having clean, current, and traceable EC/FC project data. If this ingestion layer is weak, later modules such as analytics, dashboards, reporting, search, or alerts will also become unreliable.
+
+---
+
+# 1. SDD - Software/System Design Document
+
+## 1.1 Purpose
+
+The purpose of Module 1 is to design a reliable local data ingestion system for EC and FC clearance records related to mining-sector projects. Since the source portals do not provide a usable API, the module must use browser automation to interact with JavaScript-rendered pages.
+
+The module must:
+
+- Run automatically on a recurring schedule.
+- Scrape EC and FC records from UI pages.
+- Extract listing-page and detail-page data.
+- Keep only mining-sector records.
+- Store normalized records in a local database.
+- Detect new, updated, unchanged, failed, and possibly missing records.
+- Maintain logs and scrape history for debugging and audit purposes.
+
+## 1.2 Problem Statement
+
+Environmental and forest clearance information is usually published across web portals that are designed for human browsing. These pages may require JavaScript rendering, pagination, filtering, clicking detail pages, or downloading linked documents. Because no direct API is available, manually collecting this data is slow, inconsistent, and difficult to repeat.
+
+Module 1 solves this problem by automating the data collection process while keeping the system safe, traceable, and repeatable.
+
+## 1.3 Goals
+
+- Build a recurring scraper for EC and FC data.
+- Support JavaScript-rendered pages using browser automation.
+- Extract records consistently from listing and detail pages.
+- Filter results so only mining-sector projects are stored.
+- Store data in a local database using idempotent upsert logic.
+- Preserve raw scraped payloads for traceability.
+- Track every scrape run and every error.
+- Support future modules by providing clean and normalized data.
+
+## 1.4 Non-Goals
+
+This module will not:
+
+- Submit EC or FC applications.
+- Modify any government or public portal data.
+- Bypass captchas, authentication, paywalls, or access controls.
+- Scrape unrelated sectors for final storage.
+- Build a full analytics dashboard.
+- Provide real-time streaming updates.
+- Replace official records or legal verification.
+
+## 1.5 Assumptions
+
+- EC and FC data is available through public UI pages.
+- Source pages are JavaScript-rendered and require browser automation.
+- No reliable public API exists for the required data.
+- Mining-sector identification can be performed using source fields and fallback keywords.
+- A local database is acceptable for the first implementation.
+- The scraper will run on a controlled schedule instead of continuously.
+- Source portal layouts may change, so selectors must be isolated and testable.
+
+## 1.6 Scope
+
+### In Scope
+
+- Scheduled EC scraping.
+- Scheduled FC scraping.
+- Browser-rendered page loading.
+- Listing-page extraction.
+- Detail-page extraction.
+- Mining-sector filtering.
+- Data normalization.
+- Local database persistence.
+- Change detection.
+- Scrape run logs.
+- Error logs.
+- Retry handling.
+- Screenshot or HTML capture for debugging failures.
+
+### Out of Scope
+
+- Non-mining project storage.
+- User interface screens.
+- Authentication workflows.
+- Captcha solving.
+- Cloud deployment automation.
+- Legal validation of clearance decisions.
+
+## 1.7 Users and Stakeholders
+
+| Stakeholder | Interest in Module |
+|---|---|
+| Developers | Need a clear architecture and implementation plan. |
+| Data users | Need accurate and current EC/FC records. |
+| Project maintainers | Need scheduled ingestion that can be monitored and debugged. |
+| Future module owners | Need normalized data for dashboards, reports, search, or analytics. |
+| Reviewers/teachers | Need evidence that the module architecture, data flow, and technical plan are understood before coding. |
+
+## 1.8 External Systems
+
+| External System | Role |
+|---|---|
+| EC source portal | Provides Environmental Clearance records through UI pages. |
+| FC source portal | Provides Forest Clearance records through UI pages. |
+| Local file system | Stores debug screenshots, optional HTML snapshots, logs, or downloaded documents. |
+| Local database | Stores normalized clearance data, scrape runs, errors, and change history. |
+
+## 1.9 High-Level Context Diagram
+
+```mermaid
+flowchart LR
+    Scheduler["Scheduler"] --> Scraper["Module 1 Scraper"]
+    Scraper --> EC["EC Portal UI"]
+    Scraper --> FC["FC Portal UI"]
+    EC --> Scraper
+    FC --> Scraper
+    Scraper --> DB["Local Database"]
+    Scraper --> Logs["Run Logs and Error Logs"]
+    Scraper --> Files["Debug Files / Screenshots / Optional Documents"]
+    DB --> Future["Future Modules: Search, Dashboard, Reports, Analytics"]
+```
+
+## 1.10 System Architecture
+
+```mermaid
+flowchart TD
+    A["Scheduler"] --> B["Scrape Orchestrator"]
+    B --> C["EC Scraper Adapter"]
+    B --> D["FC Scraper Adapter"]
+    C --> E["Browser Renderer"]
+    D --> E
+    E --> F["Rendered Listing Pages"]
+    F --> G["Listing Extractor"]
+    G --> H["Detail Page Extractor"]
+    H --> I["Raw Record Payload"]
+    I --> J["Mining-Sector Filter"]
+    J --> K["Normalizer"]
+    K --> L["Validator"]
+    L --> M["Content Hash Generator"]
+    M --> N["Persistence Service"]
+    N --> O["Local Database"]
+    B --> P["Run Logger"]
+    E --> Q["Error Logger"]
+    H --> Q
+    N --> Q
+```
+
+## 1.11 Component Responsibilities
+
+| Component | Responsibility | Output |
+|---|---|---|
+| Scheduler | Starts scraping jobs based on configured time intervals. | Run trigger |
+| Scrape Orchestrator | Coordinates the full scrape workflow. | Run summary |
+| EC Scraper Adapter | Handles EC-specific URLs, filters, selectors, pagination, and extraction. | Raw EC records |
+| FC Scraper Adapter | Handles FC-specific URLs, filters, selectors, pagination, and extraction. | Raw FC records |
+| Browser Renderer | Loads JavaScript-rendered pages using a browser automation tool. | Rendered DOM, screenshots |
+| Listing Extractor | Reads records from tables, cards, or listing views. | Listing records |
+| Detail Extractor | Opens detail pages and extracts full record fields. | Raw detail payload |
+| Mining Filter | Keeps only mining-sector records. | Accepted or rejected decision |
+| Normalizer | Converts inconsistent source fields into the local schema. | Normalized record |
+| Validator | Checks required fields and data formats. | Valid record or validation error |
+| Hash Generator | Creates stable hashes for change detection. | Content hash |
+| Persistence Service | Inserts, updates, or marks records unchanged. | Database result |
+| Run Logger | Stores run-level metrics. | Scrape run record |
+| Error Logger | Stores failures, retry counts, URLs, and debug paths. | Error record |
+
+## 1.12 Main Data Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant S as Scheduler
+    participant O as Orchestrator
+    participant A as EC/FC Adapter
+    participant B as Browser Renderer
+    participant F as Mining Filter
+    participant N as Normalizer
+    participant P as Persistence
+    participant D as Local Database
+
+    S->>O: Start scheduled run
+    O->>D: Create scrape_run record
+    O->>A: Start EC or FC scrape
+    A->>B: Open listing page
+    B-->>A: Rendered DOM
+    A->>A: Extract listing rows
+    A->>B: Open detail pages
+    B-->>A: Rendered detail DOM
+    A-->>O: Raw records
+    O->>F: Check mining relevance
+    F-->>O: Accepted mining record
+    O->>N: Normalize record
+    N-->>O: Canonical record
+    O->>P: Upsert record
+    P->>D: Insert, update, or unchanged
+    O->>D: Finalize scrape_run metrics
+```
+
+## 1.13 Mining-Sector Filtering Design
+
+The module must store only mining-sector records. Filtering should happen after extraction but before final database persistence.
+
+### Preferred Filtering
+
+Use source-provided structured fields when available:
+
+- Sector
+- Project category
+- Proposal type
+- Industry type
+- Clearance category
+- Mineral name
+- Mining lease information
+
+### Fallback Keyword Filtering
+
+If structured fields are missing or inconsistent, inspect text fields such as project name, description, proposal summary, and document titles.
+
+Mining indicators include:
+
+- mining
+- mine
+- mineral
+- coal
+- iron ore
+- bauxite
+- limestone
+- quarry
+- mining lease
+- lease area
+- extraction
+- beneficiation
+- manganese
+- dolomite
+- laterite
+- granite
+- sand mining
+
+### Rejection Examples
+
+Records should be rejected when they clearly belong to unrelated sectors such as:
+
+- highways
+- buildings
+- hospitals
+- tourism
+- irrigation
+- non-mining manufacturing
+- residential townships
+- ports unrelated to mining
+
+### Filtering Decision Flow
+
+```mermaid
+flowchart TD
+    A["Raw scraped record"] --> B{"Structured sector field exists?"}
+    B -- Yes --> C{"Sector says mining/mineral/coal/quarry?"}
+    C -- Yes --> D["Accept as mining record"]
+    C -- No --> E["Reject as non-mining"]
+    B -- No --> F["Run keyword classification"]
+    F --> G{"Strong mining terms found?"}
+    G -- Yes --> D
+    G -- No --> H{"Ambiguous terms?"}
+    H -- Yes --> I["Log for review / skip final storage"]
+    H -- No --> E
+```
+
+## 1.14 Local Database Design
+
+The local database stores both the latest version of each clearance record and the operational history needed to understand how that data was collected.
+
+### Main Entities
+
+| Entity | Purpose |
+|---|---|
+| `clearance_projects` | Stores the latest known EC/FC data for each mining project. |
+| `scrape_runs` | Stores one row for every scheduled, manual, or backfill run. |
+| `scrape_errors` | Stores page-level and record-level errors. |
+| `clearance_change_history` | Stores old and new payloads when a record changes. |
+| `source_documents` | Stores links to clearance letters, PDFs, or supporting documents found during scraping. |
+
+## 1.15 ER Diagram
+
+```mermaid
+erDiagram
+    clearance_projects ||--o{ clearance_change_history : has
+    clearance_projects ||--o{ source_documents : has
+    scrape_runs ||--o{ scrape_errors : records
+    scrape_runs ||--o{ clearance_change_history : creates
+
+    clearance_projects {
+        int id PK
+        string clearance_type
+        string source_record_id
+        string proposal_number
+        string project_name
+        string project_proponent
+        string sector
+        string state
+        string district
+        string status
+        string content_hash
+        datetime first_seen_at
+        datetime last_seen_at
+        datetime last_changed_at
+        boolean is_active
+    }
+
+    scrape_runs {
+        int id PK
+        string run_type
+        datetime started_at
+        datetime finished_at
+        string status
+        int records_found
+        int records_inserted
+        int records_updated
+        int records_failed
+    }
+
+    scrape_errors {
+        int id PK
+        int scrape_run_id FK
+        string clearance_type
+        string url
+        string error_type
+        string error_message
+        int retry_count
+    }
+
+    clearance_change_history {
+        int id PK
+        int project_id FK
+        int scrape_run_id FK
+        text old_payload
+        text new_payload
+        string old_hash
+        string new_hash
+        datetime changed_at
+    }
+
+    source_documents {
+        int id PK
+        int project_id FK
+        string document_type
+        string document_url
+        datetime discovered_at
+    }
+```
+
+## 1.16 Data Freshness and Update Rules
+
+The scraper should not blindly replace records every time it runs. It should compare the new normalized data with the existing database record.
+
+| Case | Meaning | Action |
+|---|---|---|
+| New record | Record does not exist in database. | Insert new row. |
+| Existing unchanged record | Record exists and content hash is the same. | Update `last_seen_at` only. |
+| Existing changed record | Record exists and content hash is different. | Save change history and update current row. |
+| Missing record | Previously seen record is not found in current run. | Do not immediately delete; mark inactive only after repeated missed runs. |
+| Failed record | Page or detail extraction failed. | Log error and retry if allowed. |
+
+## 1.17 Scheduling Requirements
+
+| Run Type | Suggested Frequency | Purpose |
+|---|---:|---|
+| Incremental scrape | Daily | Capture new or recently updated records. |
+| Recent reconciliation | Weekly | Recheck recent records for delayed updates. |
+| Full reconciliation | Monthly | Detect drift between source portals and local DB. |
+| Manual backfill | On demand | Load historical records or recover after scraper changes. |
+
+The scheduler must prevent overlapping runs. If a previous run is still active, the next scheduled run should either be skipped or delayed.
+
+## 1.18 Reliability Requirements
+
+- Retry transient failures with exponential backoff.
+- Continue scraping after individual record failures.
+- Log every failed URL.
+- Capture screenshot or HTML snapshot for selector failures.
+- Store raw payloads for later reprocessing.
+- Keep selectors isolated so portal UI changes are easier to fix.
+- Use conservative stale-record logic to avoid false deletion.
+
+## 1.19 Security and Ethical Requirements
+
+- Do not hardcode credentials, tokens, API keys, or proxy secrets.
+- Do not bypass captchas, login pages, or anti-abuse controls.
+- Use environment variables for configuration.
+- Treat scraped data as untrusted input.
+- Validate all extracted fields before writing to the database.
+- Use parameterized SQL or ORM-based writes.
+- Sanitize scraped text before displaying it in any UI.
+- Use polite scraping speeds to avoid overloading source portals.
+- Keep logs free of secrets and private credentials.
+
+## 1.20 SDD Acceptance Criteria
+
+The system design is acceptable when:
+
+- EC and FC sources are represented as separate adapters.
+- The scraper supports JavaScript-rendered pages.
+- The workflow includes listing extraction and detail extraction.
+- Mining-sector filtering is clearly defined.
+- The database design supports current records, run history, error history, document links, and change history.
+- The design includes retry handling and non-overlapping scheduled runs.
+- The design explains how duplicates and updates are handled.
+- The design includes diagrams showing architecture, flow, and database relationships.
+
+---
+
+# 2. TDD - Technical Design Document
+
+## 2.1 Technical Objective
+
+The technical objective is to implement Module 1 as a maintainable, testable, and scheduled scraper service. The implementation should separate source-specific scraping logic from shared processing logic so EC and FC pages can evolve independently.
+
+## 2.2 Recommended Technology Stack
+
+| Concern | Recommended Tool | Reason |
+|---|---|---|
+| Language | Python 3.11+ | Good support for scraping, scheduling, data validation, and testing. |
+| Browser automation | Playwright | Handles JavaScript-rendered pages, waiting, screenshots, and browser contexts. |
+| Scheduler | APScheduler or cron | Simple recurring runs. |
+| Database | SQLite for local prototype, PostgreSQL for production | Easy local setup with a clean migration path. |
+| ORM | SQLAlchemy | Safer database operations and clearer models. |
+| Migrations | Alembic | Version-controlled schema evolution. |
+| Testing | pytest | Unit and integration testing. |
+| Coverage | pytest-cov | Measures test coverage. |
+| Formatting | Black and Ruff | Consistent code style and linting. |
+
+## 2.3 Proposed Folder Structure
+
+```text
+module_1_scraper/
+  app/
+    main.py
+    config.py
+
+    scheduler/
+      jobs.py
+      locks.py
+
+    scrapers/
+      base.py
+      browser.py
+      ec_scraper.py
+      fc_scraper.py
+      selectors.py
+
+    services/
+      mining_filter.py
+      normalizer.py
+      hashing.py
+      persistence.py
+      retry.py
+
+    db/
+      models.py
+      session.py
+      migrations/
+
+    logging/
+      run_logger.py
+      error_logger.py
+
+  tests/
+    unit/
+      test_mining_filter.py
+      test_normalizer.py
+      test_hashing.py
+      test_persistence.py
+
+    integration/
+      test_ec_scraper_fixture.py
+      test_fc_scraper_fixture.py
+      test_scheduler_lock.py
+
+    fixtures/
+      ec_listing.html
+      ec_detail.html
+      fc_listing.html
+      fc_detail.html
+```
+
+## 2.4 Runtime Configuration
+
+Configuration must come from environment variables or a `.env` file. Secrets must never be committed.
+
+```text
+DATABASE_URL=sqlite:///mace_clearances.db
+EC_PORTAL_URL=<to-be-confirmed>
+FC_PORTAL_URL=<to-be-confirmed>
+SCRAPE_HEADLESS=true
+SCRAPE_TIMEOUT_MS=30000
+MAX_PAGE_RETRIES=3
+SCRAPE_CONCURRENCY=1
+MISSED_RUN_STALE_THRESHOLD=3
+SCREENSHOT_ON_FAILURE=true
+HTML_SNAPSHOT_ON_FAILURE=true
+```
+
+## 2.5 Core Classes
+
+### `ScrapeOrchestrator`
+
+Coordinates the full scrape run.
+
+Responsibilities:
+
+- Create a scrape run record.
+- Start EC and FC adapters.
+- Send raw records to the mining filter.
+- Normalize accepted records.
+- Persist records.
+- Track inserted, updated, unchanged, skipped, and failed counts.
+- Finalize run status.
+
+### `BaseScraper`
+
+Defines the common scraper interface.
+
+```python
+class BaseScraper:
+    clearance_type: str
+
+    def scrape(self) -> list[dict]:
+        ...
+
+    def fetch_listing_pages(self) -> list[dict]:
+        ...
+
+    def fetch_detail(self, listing_record: dict) -> dict:
+        ...
+```
+
+### `ECScraper`
+
+Handles EC-specific behavior:
+
+- EC listing URL.
+- EC filters.
+- EC table selectors.
+- EC detail page selectors.
+- EC field mapping.
+
+### `FCScraper`
+
+Handles FC-specific behavior:
+
+- FC listing URL.
+- FC filters.
+- FC table selectors.
+- FC detail page selectors.
+- FC field mapping.
+
+### `BrowserRenderer`
+
+Responsible for browser automation.
+
+```python
+class BrowserRenderer:
+    def open_page(self, url: str):
+        ...
+
+    def wait_for_selector(self, selector: str):
+        ...
+
+    def get_text(self, selector: str) -> str:
+        ...
+
+    def get_html(self) -> str:
+        ...
+
+    def screenshot_on_error(self, path: str):
+        ...
+```
+
+### `MiningFilter`
+
+Returns a structured decision.
+
+```python
+{
+  "accepted": true,
+  "reason": "sector field matched Mining",
+  "matched_terms": ["Mining"]
+}
+```
+
+### `Normalizer`
+
+Converts raw source values into a stable canonical record.
+
+Responsibilities:
+
+- Trim whitespace.
+- Normalize dates.
+- Normalize status values.
+- Normalize document URLs.
+- Standardize empty values to `null`.
+- Preserve original raw payload.
+
+### `PersistenceService`
+
+Handles database writes.
+
+```python
+def upsert_clearance_project(record: dict, scrape_run_id: int) -> str:
+    ...
+```
+
+Return values:
+
+- `inserted`
+- `updated`
+- `unchanged`
+- `failed`
+
+## 2.6 Normalized Record Shape
+
+```json
+{
+  "clearance_type": "EC",
+  "source_record_id": "source-specific-id",
+  "proposal_number": "IA/XX/MIN/000000/2026",
+  "project_name": "Mining Project Name",
+  "project_proponent": "Company or Agency",
+  "sector": "Mining",
+  "sub_sector": "Coal / Non-coal / Mineral Type",
+  "state": "State",
+  "district": "District",
+  "mineral": "Iron Ore",
+  "mine_area": "100 ha",
+  "capacity": "1.0 MTPA",
+  "status": "Granted",
+  "stage": "EC Granted",
+  "clearance_date": "YYYY-MM-DD",
+  "validity_date": "YYYY-MM-DD",
+  "source_url": "https://source-detail-page",
+  "document_urls": [
+    "https://source-document-url"
+  ],
+  "raw_payload": {
+    "source_label": "source value"
+  }
+}
+```
+
+## 2.7 Database Schema Draft
+
+### `clearance_projects`
+
+```sql
+CREATE TABLE clearance_projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    clearance_type TEXT NOT NULL,
+    source_record_id TEXT,
+    proposal_number TEXT,
+    project_name TEXT NOT NULL,
+    project_proponent TEXT,
+    sector TEXT,
+    sub_sector TEXT,
+    state TEXT,
+    district TEXT,
+    mineral TEXT,
+    mine_area TEXT,
+    capacity TEXT,
+    status TEXT,
+    stage TEXT,
+    clearance_date DATE,
+    validity_date DATE,
+    source_url TEXT,
+    document_urls TEXT,
+    raw_payload TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    first_seen_at DATETIME NOT NULL,
+    last_seen_at DATETIME NOT NULL,
+    last_changed_at DATETIME,
+    is_active BOOLEAN NOT NULL DEFAULT 1,
+    UNIQUE(clearance_type, source_record_id)
+);
+```
+
+### `scrape_runs`
+
+```sql
+CREATE TABLE scrape_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_type TEXT NOT NULL,
+    started_at DATETIME NOT NULL,
+    finished_at DATETIME,
+    status TEXT NOT NULL,
+    records_found INTEGER DEFAULT 0,
+    records_accepted INTEGER DEFAULT 0,
+    records_inserted INTEGER DEFAULT 0,
+    records_updated INTEGER DEFAULT 0,
+    records_unchanged INTEGER DEFAULT 0,
+    records_failed INTEGER DEFAULT 0
+);
+```
+
+### `scrape_errors`
+
+```sql
+CREATE TABLE scrape_errors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scrape_run_id INTEGER NOT NULL,
+    clearance_type TEXT,
+    url TEXT,
+    source_record_id TEXT,
+    error_type TEXT,
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    screenshot_path TEXT,
+    html_snapshot_path TEXT,
+    created_at DATETIME NOT NULL
+);
+```
+
+### `clearance_change_history`
+
+```sql
+CREATE TABLE clearance_change_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    scrape_run_id INTEGER NOT NULL,
+    old_payload TEXT NOT NULL,
+    new_payload TEXT NOT NULL,
+    old_hash TEXT NOT NULL,
+    new_hash TEXT NOT NULL,
+    changed_at DATETIME NOT NULL
+);
+```
+
+### `source_documents`
+
+```sql
+CREATE TABLE source_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    document_type TEXT,
+    document_url TEXT NOT NULL,
+    file_name TEXT,
+    discovered_at DATETIME NOT NULL,
+    UNIQUE(project_id, document_url)
+);
+```
+
+## 2.8 Upsert Algorithm
+
+```mermaid
+flowchart TD
+    A["Normalized mining record"] --> B["Validate required fields"]
+    B --> C{"Valid?"}
+    C -- No --> D["Log validation error"]
+    C -- Yes --> E["Build unique key"]
+    E --> F["Find existing DB row"]
+    F --> G{"Row exists?"}
+    G -- No --> H["Insert new project"]
+    G -- Yes --> I["Compute new content hash"]
+    I --> J{"Hash changed?"}
+    J -- No --> K["Update last_seen_at"]
+    J -- Yes --> L["Insert change history"]
+    L --> M["Update project row"]
+```
+
+Detailed steps:
+
+1. Validate required fields.
+2. Build unique key using `clearance_type + source_record_id`.
+3. If `source_record_id` is missing, fall back to `clearance_type + proposal_number`.
+4. Normalize all business fields.
+5. Compute content hash.
+6. Insert new record when no matching row exists.
+7. Update only `last_seen_at` when the hash is unchanged.
+8. Write change history and update the main row when the hash changes.
+9. Log validation failures without stopping the whole run.
+
+## 2.9 Content Hash Rules
+
+Include fields that represent meaningful source changes:
+
+- `project_name`
+- `project_proponent`
+- `sector`
+- `sub_sector`
+- `state`
+- `district`
+- `mineral`
+- `mine_area`
+- `capacity`
+- `status`
+- `stage`
+- `clearance_date`
+- `validity_date`
+- sorted `document_urls`
+
+Exclude operational fields:
+
+- `first_seen_at`
+- `last_seen_at`
+- `last_changed_at`
+- `scrape_run_id`
+- retry count
+- screenshot path
+- temporary page metadata
+
+## 2.10 Error Handling Strategy
+
+| Error Type | Example | Handling |
+|---|---|---|
+| Navigation timeout | Page does not load in time. | Retry with exponential backoff. |
+| Selector missing | Expected table selector is not found. | Capture screenshot and HTML snapshot. |
+| Pagination failure | Next button not clickable. | Log page failure and continue if possible. |
+| Detail extraction failure | Detail page layout changed. | Log record-level error and continue. |
+| Validation failure | Missing project name or identifier. | Reject record and log reason. |
+| Database failure | Insert or update fails. | Roll back transaction and mark run failed if needed. |
+| Source unavailable | Portal is down. | Abort adapter and preserve run summary. |
+
+## 2.11 Test Plan
+
+### Unit Tests
+
+| Test File | What It Verifies |
+|---|---|
+| `test_mining_filter.py` | Mining keyword detection, structured sector matching, rejection of non-mining sectors. |
+| `test_normalizer.py` | Date parsing, whitespace cleanup, status normalization, URL normalization. |
+| `test_hashing.py` | Stable hash generation and exclusion of operational fields. |
+| `test_persistence.py` | Insert, update, unchanged, and change-history behavior. |
+
+### Integration Tests
+
+| Test File | What It Verifies |
+|---|---|
+| `test_ec_scraper_fixture.py` | EC listing and detail fixture extraction. |
+| `test_fc_scraper_fixture.py` | FC listing and detail fixture extraction. |
+| `test_scheduler_lock.py` | Prevents overlapping scheduled runs. |
+| `test_database_flow.py` | End-to-end persistence using a temporary database. |
+
+### Browser Smoke Test
+
+The browser smoke test should:
+
+1. Open a saved JS-rendered fixture page.
+2. Wait for the listing table or record container.
+3. Extract listing rows.
+4. Open a detail fixture.
+5. Extract raw fields.
+6. Filter to mining-sector records.
+7. Normalize the accepted record.
+8. Persist it.
+9. Verify the database row exists.
+
+## 2.12 Dev Container Environment Check
+
+If the repository uses a VS Code dev container, open the repository in VS Code and run:
+
+```text
+Dev Containers: Reopen in Container
+```
+
+After the container starts, verify:
+
+```bash
+python --version
+pip --version
+pytest --version
+playwright --version
+```
+
+Install Playwright browsers if needed:
+
+```bash
+python -m playwright install
+```
+
+Run tests:
+
+```bash
+pytest
+```
+
+Run coverage:
+
+```bash
+pytest --cov=app --cov-report=term-missing
+```
+
+Expected coverage target:
+
+```text
+80% or higher
+```
+
+## 2.13 Implementation Phases
+
+```mermaid
+flowchart LR
+    A["Phase 1: Schema and config"] --> B["Phase 2: Unit tests"]
+    B --> C["Phase 3: Browser renderer"]
+    C --> D["Phase 4: EC adapter"]
+    D --> E["Phase 5: FC adapter"]
+    E --> F["Phase 6: Scheduler and locks"]
+    F --> G["Phase 7: Error handling"]
+    G --> H["Phase 8: Integration tests"]
+    H --> I["Phase 9: Pilot run"]
+```
+
+### Phase Details
+
+1. Create project structure, settings, database models, and migrations.
+2. Write unit tests for filtering, normalization, hashing, and persistence.
+3. Implement browser rendering and fixture-based extraction.
+4. Implement EC source adapter.
+5. Implement FC source adapter.
+6. Add scheduler jobs and non-overlap locking.
+7. Add retry handling, screenshots, and scrape error logging.
+8. Run integration and browser smoke tests.
+9. Pilot the scraper with conservative concurrency and inspect logs.
+
+## 2.14 TDD Acceptance Criteria
+
+The technical design is complete when:
+
+- EC and FC adapters are separated.
+- JavaScript-rendered pages can be loaded through Playwright.
+- Listing and detail extraction are both supported.
+- Mining-sector filtering has structured and keyword-based paths.
+- Data normalization produces a stable canonical record.
+- Database upsert behavior prevents duplicates.
+- Changed records create change-history rows.
+- Failed pages are logged and retried.
+- Scheduled runs do not overlap.
+- Unit and integration tests can reach at least 80 percent coverage.
+
+---
+
+# 3. Open Items Before Implementation
+
+These items should be confirmed before coding:
+
+- Exact EC portal URL.
+- Exact FC portal URL.
+- Final database choice: SQLite or PostgreSQL.
+- Required production schedule.
+- Whether source documents should only be linked or also downloaded.
+- Deployment target: local machine, dev container, server, Docker, or cloud job.
+- Naming convention for this module inside the shared repository.
+
+---
+
+# 4. Pull Request Notes
+
+This README content is intentionally module-specific. It avoids repeating shared repository-level information such as overall project name, team members, or global setup instructions, because those sections may be handled by other team members in separate pull requests.
+
+Suggested commit message:
+
+```bash
+docs: add module 1 SDD and TDD
+```
+
+
+
 # Development Must Dos
 Switch to "development" branch when writing code, do not push/merge in "main" branch.
 
@@ -38,10 +1026,6 @@ Switch to "development" branch when writing code, do not push/merge in "main" br
 
 
 
-
-
-
-arjun-module2-sdd-tdd
 # Module 2: Data Processing and Compliance Structuring
 
 Module 2 receives raw mining-project and environmental-compliance data from Module 1, approved files, internal Python objects, or shared database records. It validates, normalizes, classifies, and maps this information into structured compliance sections. The processed data is stored in PostgreSQL and made available to Module 3.
@@ -59,7 +1043,7 @@ This README contains the complete Software Design Document and Technical Design 
 
 # **SOFTWARE DESIGN DOCUMENT (SDD) STARTS HERE**
 
-arjun-module2-sdd-tdd
+
 > **Module:** Data Extraction, Processing, Validation, and Compliance Document Structuring  
 > **Project:** MACE — Mining Automated Compliance Execution  
 > **Architecture Rule:** No external API-based communication  
@@ -74,7 +1058,7 @@ arjun-module2-sdd-tdd
 
 ## 1. Module Overview
 
-arjun-module2-sdd-tdd
+
 Module 2 is responsible for receiving mining-project and environmental-compliance data, validating it, cleaning it, organizing it, and mapping it into structured compliance sections.
 
 The module works as an internal Python processing layer. It does not expose web APIs. Data is received from files, shared database records, or internal Python functions and is passed to the next module through shared database tables or internal program calls.
@@ -115,7 +1099,7 @@ Module 3 supports reports such as:
 
 ## 2. Purpose
 
-arjun-module2-sdd-tdd
+
 The purpose of Module 2 is to convert raw and unorganized compliance data into a clean, validated, and structured format that can be used by later modules.
 
 The module reduces:
@@ -126,7 +1110,7 @@ The module reduces:
 - Duplicate records
 - Incorrect field formats
 - Difficulty in preparing compliance sections
-=======
+
 The purpose of Module 3 is to give users a reliable, repeatable way to produce a formatted compliance report from data that already exists in the system, and to read that report without leaving the application.
 
 The module reduces:
@@ -142,7 +1126,7 @@ The module reduces:
 
 ## 3. Objectives
 
-arjun-module2-sdd-tdd
+
 - Accept project data from Module 1, files, or database records.
 - Validate required fields.
 - Normalize names, dates, values, and units.
@@ -152,7 +1136,7 @@ arjun-module2-sdd-tdd
 - Store structured results in PostgreSQL.
 - Provide processed data to Module 3.
 - Maintain warnings, errors, and source references.
-=======
+
 - Accept a report request from the React frontend.
 - Validate the request and the requesting user's access.
 - Read structured compliance data produced by Module 2.
@@ -170,7 +1154,7 @@ arjun-module2-sdd-tdd
 
 ### 4.1 Included
 
-arjun-module2-sdd-tdd
+
 - Mining project information
 - Project location and lease details
 - Mineral and production details
@@ -195,7 +1179,7 @@ arjun-module2-sdd-tdd
 - Laboratory testing
 - Final report generation
 - User authentication owned by another module
-=======
+
 - Report request handling
 - Report type selection
 - Reading structured data from Module 2
@@ -224,7 +1208,7 @@ arjun-module2-sdd-tdd
 
 | User / Stakeholder | Role |
 |---|---|
-arjun-module2-sdd-tdd
+
 | Environmental consultant | Reviews processed information |
 | Compliance team | Checks completeness and correctness |
 | Project coordinator | Tracks project status |
@@ -232,7 +1216,7 @@ arjun-module2-sdd-tdd
 | Module 1 | Supplies raw or extracted data |
 | Module 3 | Uses structured output |
 | Administrator | Maintains reference values |
-=======
+
 | Environmental consultant | Requests and reads compliance reports |
 | Compliance team | Reviews generated reports before submission |
 | Project coordinator | Tracks which reports have been produced |
@@ -249,7 +1233,7 @@ arjun-module2-sdd-tdd
 
 | ID | Requirement |
 |---|---|
-arjun-module2-sdd-tdd
+
 | FR-01 | The module shall receive data from files, internal functions, or shared database tables. |
 | FR-02 | The module shall validate mandatory project fields. |
 | FR-03 | The module shall validate data types and numerical ranges. |
@@ -264,7 +1248,7 @@ arjun-module2-sdd-tdd
 | FR-12 | The module shall provide structured records to Module 3. |
 | FR-13 | The module shall allow correction and reprocessing. |
 | FR-14 | The module shall store processing status and timestamps. |
-=======
+
 | FR-01 | The module shall accept a report request specifying a project and a report type. |
 | FR-02 | The module shall validate the request payload before any work begins. |
 | FR-03 | The module shall confirm the user is allowed to access the requested project. |
@@ -287,7 +1271,7 @@ arjun-module2-sdd-tdd
 
 | ID | Category | Requirement |
 |---|---|---|
-arjun-module2-sdd-tdd
+
 | NFR-01 | Maintainability | Processing logic shall be divided into separate Python modules. |
 | NFR-02 | Reliability | One invalid record shall not damage other valid records. |
 | NFR-03 | Security | Database credentials shall remain outside source control. |
@@ -296,7 +1280,7 @@ arjun-module2-sdd-tdd
 | NFR-06 | Consistency | Output shall follow one standard internal structure. |
 | NFR-07 | Auditability | Source, status, and processing results shall be traceable. |
 | NFR-08 | Performance | Normal project datasets shall process without unnecessary delay. |
-=======
+
 | NFR-01 | Responsiveness | The frontend shall stay usable while a report is generating. |
 | NFR-02 | Reliability | A failure at any stage shall produce a clear, recoverable state. |
 | NFR-03 | Security | Storage and database credentials shall remain outside source control. |
@@ -311,7 +1295,7 @@ arjun-module2-sdd-tdd
 
 ## 8. Use Cases
 
-arjun-module2-sdd-tdd
+
 ### 8.1 Process New Project Data
 
 1. Module 1 or a file provides project data.
@@ -335,7 +1319,7 @@ arjun-module2-sdd-tdd
 1. Module 3 requests project information through shared database access or an internal Python function.
 2. Module 2 checks whether the data is ready.
 3. Approved structured sections are returned.
-=======
+
 ### 8.1 Generate a Report
 
 1. The user opens the report dashboard.
@@ -367,7 +1351,7 @@ arjun-module2-sdd-tdd
 
 ```mermaid
 flowchart LR
-arjun-module2-sdd-tdd
+
     A[Module 1 / Input Files / Shared Database] --> B[Python Input Reader]
     B --> C[Validation Layer]
     C --> D[Normalization Layer]
@@ -401,7 +1385,7 @@ flowchart TD
     K --> L[Save structured data]
     L --> M[Update processing status]
     M --> N[Make data available to Module 3]
-=======
+
     A[React Frontend] --> B[Report API Layer]
     B --> C[Validation and Authorization]
     C --> D[Report Service]
@@ -444,14 +1428,14 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-arjun-module2-sdd-tdd
+
     M1[Module 1] -->|Files / Shared Tables / Internal Objects| M2[Module 2]
     M2 -->|Errors and Missing Fields| M1
     M2 -->|Structured Database Records| M3[Module 3]
 ```
 
 No HTTP requests or external API calls are required.
-=======
+
     SEC[Shared Security Module] -->|Validated token| M3[Module 3]
     M2[Module 2] -->|Structured compliance data| M3
     M3 -->|Report request and status| FE[React Frontend]
@@ -466,7 +1450,7 @@ Module 3 reads Module 2 data and does not modify it.
 
 ## 12. Component Design
 
-arjun-module2-sdd-tdd
+
 ### 12.1 Input Reader
 
 Reads data from:
@@ -537,7 +1521,7 @@ Stores:
 - Compliance sections
 - Processing status
 - Source references
-=======
+
 ### 12.1 Report API
 
 Exposes the report endpoints, checks the access token, validates the payload, and shapes the HTTP response. Contains no business logic.
@@ -569,7 +1553,7 @@ Renders the PDF inline and provides download and print actions, along with gener
 
 ```mermaid
 flowchart LR
-arjun-module2-sdd-tdd
+
     F1[Input File] --> P[Module 2 Processing]
     D1[(Shared Raw Data Tables)] --> P
     M1[Module 1 Internal Output] --> P
@@ -577,7 +1561,7 @@ arjun-module2-sdd-tdd
     P --> D3[(Validation Results)]
     P --> D4[(Compliance Sections)]
     D4 --> M3[Module 3]
-=======
+
     R[Report Request] --> S[Report Service]
     D1[(Module 2 Structured Data)] --> S
     T[Report Template] --> S
@@ -594,7 +1578,7 @@ arjun-module2-sdd-tdd
 
 ```mermaid
 erDiagram
-arjun-module2-sdd-tdd
+
     PROJECT ||--o{ ENVIRONMENTAL_OBSERVATION : contains
     PROJECT ||--o{ VALIDATION_RESULT : has
     PROJECT ||--o{ COMPLIANCE_SECTION : produces
@@ -650,7 +1634,7 @@ arjun-module2-sdd-tdd
         string source_type
         uuid source_id
         text structured_content
-=======
+
     REPORT_TEMPLATE ||--o{ REPORT_REQUEST : defines
     REPORT_REQUEST ||--o| GENERATED_REPORT : produces
     PROJECT ||--o{ REPORT_REQUEST : has
@@ -696,7 +1680,7 @@ arjun-module2-sdd-tdd
 
 ```json
 {
-arjun-module2-sdd-tdd
+
   "project_name": "Example Limestone Mining Project",
   "proponent_name": "Example Minerals Private Limited",
   "mineral_type": "Limestone",
@@ -706,7 +1690,7 @@ arjun-module2-sdd-tdd
   "production_capacity_unit": "MTPA",
   "district": "Example District",
   "state": "Example State"
-=======
+
   "project_id": "example-project-uuid",
   "template_code": "COMPLIANCE_SUMMARY",
   "options": {
@@ -722,7 +1706,7 @@ arjun-module2-sdd-tdd
 
 ```json
 {
-arjun-module2-sdd-tdd
+
   "project_id": "generated-uuid",
   "processing_status": "READY_WITH_WARNINGS",
   "validation_summary": {
@@ -739,7 +1723,7 @@ arjun-module2-sdd-tdd
       "status": "INCOMPLETE"
     }
   ]
-=======
+
   "request_id": "generated-uuid",
   "status": "ready",
   "file_url": "https://storage.example.com/reports/generated-uuid.pdf",
@@ -756,7 +1740,7 @@ arjun-module2-sdd-tdd
 
 | Rule ID | Rule |
 |---|---|
-arjun-module2-sdd-tdd
+
 | VR-01 | Project name is mandatory. |
 | VR-02 | Proponent name is mandatory. |
 | VR-03 | Mineral type is mandatory. |
@@ -769,7 +1753,7 @@ arjun-module2-sdd-tdd
 | VR-10 | Duplicate observations must be flagged. |
 | VR-11 | Critical errors must block approval. |
 | VR-12 | Every structured value must retain a source reference. |
-=======
+
 | VR-01 | Project identifier is mandatory. |
 | VR-02 | Report type code is mandatory. |
 | VR-03 | The report type must exist and be active. |
@@ -784,7 +1768,7 @@ arjun-module2-sdd-tdd
 
 ## 17. Error Handling
 
-arjun-module2-sdd-tdd
+
 The module shall use:
 
 - Critical errors
@@ -801,7 +1785,7 @@ Each issue should include:
 - Severity
 - Message
 - Source record reference
-=======
+
 The module shall handle:
 
 - Invalid request payloads
@@ -827,7 +1811,7 @@ A request is never left silently stuck in the generating state, and a partial PD
 ## 18. Security
 
 - `.env` must not be committed.
-arjun-module2-sdd-tdd
+
 - Database credentials must be stored in environment variables.
 - Only authorized users or modules may edit approved records.
 - Sensitive client information must not be printed in logs.
@@ -850,7 +1834,7 @@ arjun-module2-sdd-tdd
 
 ### Assumptions
 
-arjun-module2-sdd-tdd
+
 - Module 1 supplies data in an agreed format.
 - Module 3 reads structured information from shared tables or internal functions.
 - A human reviewer remains responsible for final correctness.
@@ -874,7 +1858,7 @@ arjun-module2-sdd-tdd
 - No direct government portal submission.
 - No legal approval decision.
 - No final report-generation responsibility.
-=======
+
 - Module 2 supplies validated, structured compliance data.
 - The shared security module issues and validates access tokens.
 - A human reviewer remains responsible for final report correctness.
@@ -902,7 +1886,7 @@ arjun-module2-sdd-tdd
 
 ## 20. Acceptance Criteria
 
-arjun-module2-sdd-tdd
+
 1. Valid project data is processed successfully.
 2. Missing required fields produce clear errors.
 3. Invalid values are rejected.
@@ -915,7 +1899,7 @@ arjun-module2-sdd-tdd
 10. The module runs in the Dev Container.
 11. Core Python functions are tested.
 12. No API dependency is required.
-=======
+
 1. A user can request a report from the React dashboard.
 2. The request is validated and authorized.
 3. Structured Module 2 data is read correctly.
@@ -934,7 +1918,7 @@ arjun-module2-sdd-tdd
 
 ## 21. Future Enhancements
 
-arjun-module2-sdd-tdd
+
 - Additional file formats
 - Configurable validation rules
 - Automated completeness scoring
@@ -942,7 +1926,7 @@ arjun-module2-sdd-tdd
 - Reviewer approval workflow
 - Additional industries beyond mining
 - Intelligent section suggestions
-=======
+
 - Additional report types and templates
 - Scheduled and automatic report generation
 - Export to Word in addition to PDF
@@ -956,11 +1940,11 @@ arjun-module2-sdd-tdd
 
 # **TECHNICAL DESIGN DOCUMENT (TDD) STARTS HERE**
 
-arjun-module2-sdd-tdd
+
 > **Module:** Data Extraction, Processing, Validation, and Compliance Document Structuring  
 > **Project:** MACE — Mining Automated Compliance Execution  
 > **Architecture Rule:** No external API-based communication  
-=======
+
 > **Module:** Generate PDF Reports and Display Them on the React Frontend
 > **Project:** MACE — Mining Automated Compliance Execution
 > **Prepared By:** Kirtika (2023A7PS0219U)
@@ -972,7 +1956,7 @@ arjun-module2-sdd-tdd
 
 ## 1. Technical Overview
 
-arjun-module2-sdd-tdd
+
 Module 2 is designed as an internal Python processing module.
 
 It does not expose FastAPI endpoints and does not depend on HTTP communication. It receives information through internal Python objects, approved files, or shared PostgreSQL tables.
@@ -987,7 +1971,7 @@ The module performs:
 - Database storage
 - Data-quality evaluation
 - Output preparation for Module 3
-=======
+
 Module 3 is designed as a report generation and presentation module.
 
 On the backend it runs a small Node.js and Express service that exposes report endpoints to the React frontend. It reads structured compliance data prepared by Module 2, binds that data into an HTML report template, and uses Puppeteer to render the template into a PDF document. The PDF is stored in object storage and a reference is saved in the database.
@@ -1012,7 +1996,7 @@ The module performs:
 
 ### Included
 
-arjun-module2-sdd-tdd
+
 - Python file readers
 - Internal processing functions
 - Pydantic data models
@@ -1023,7 +2007,7 @@ arjun-module2-sdd-tdd
 - SQLAlchemy models
 - PostgreSQL storage
 - Alembic migrations
-=======
+
 - Express report routes and controllers
 - Request validation
 - Report orchestration service
@@ -1038,7 +2022,7 @@ arjun-module2-sdd-tdd
 
 ### Excluded
 
-arjun-module2-sdd-tdd
+
 - FastAPI routers
 - HTTP endpoints
 - REST APIs
@@ -1047,7 +2031,7 @@ arjun-module2-sdd-tdd
 - User-interface code
 - Final report generation
 - Authentication implementation
-=======
+
 - Creation of source business data
 - Authentication implementation
 - Browser side PDF editing
@@ -1061,7 +2045,7 @@ arjun-module2-sdd-tdd
 
 | Area | Technology | Purpose |
 |---|---|---|
-arjun-module2-sdd-tdd
+
 | Language | Python | Core module development |
 | Validation | Pydantic | Internal data models and validation |
 | Database | PostgreSQL | Persistent storage |
@@ -1072,7 +2056,7 @@ arjun-module2-sdd-tdd
 | Container | Docker Dev Container | Reproducible environment |
 | Testing | pytest | Unit and integration testing |
 | Browser testing | Playwright, if needed | Only for project-level user-interface tests |
-=======
+
 | Backend runtime | Node.js with Express | Expose report endpoints and orchestrate generation |
 | PDF rendering | Puppeteer | Render HTML report templates into PDF |
 | Templating | HTML template engine | Bind compliance data into report layouts |
@@ -1089,7 +2073,7 @@ arjun-module2-sdd-tdd
 
 ```mermaid
 flowchart TB
-arjun-module2-sdd-tdd
+
     subgraph Inputs
         F[CSV / Excel / JSON Files]
         D[(Shared Raw Database Tables)]
@@ -1126,7 +2110,7 @@ arjun-module2-sdd-tdd
     RP --> DB
     DB --> M3
     QS --> LG
-=======
+
     subgraph Frontend
         DASH[Report Dashboard]
         VIEW[React PDF Viewer]
@@ -1166,7 +2150,7 @@ arjun-module2-sdd-tdd
 
 ## 5. Design Principles
 
-arjun-module2-sdd-tdd
+
 ### 5.1 No API Layer
 
 Module communication occurs through:
@@ -1191,7 +2175,7 @@ Every processed record retains its source.
 ### 5.5 Transaction Safety
 
 Related database changes are committed together.
-=======
+
 ### 5.1 Separation of Responsibilities
 
 Data reading, template binding, PDF rendering, storage, and display are separate units with defined interfaces.
@@ -1218,7 +2202,7 @@ Every generated report records the template version used, so an old report can b
 ## 6. Proposed Folder Structure
 
 ```text
-arjun-module2-sdd-tdd
+
 backend/
 ├── module2/
 │   ├── __init__.py
@@ -1254,7 +2238,7 @@ backend/
 │   ├── unit/
 │   └── integration/
 └── alembic/
-=======
+
 module3/
 ├── api/
 │   ├── reportRoutes.js
@@ -1293,7 +2277,7 @@ This is a proposed structure and should be adjusted to the final MACE repository
 
 ## 7. Main Components
 
-arjun-module2-sdd-tdd
+
 ### 7.1 Input Reader
 
 ```python
@@ -1376,7 +2360,7 @@ class ProjectRepository:
 
     async def get_project(self, session, project_id):
         ...
-=======
+
 ### 7.1 Report Controller
 
 ```javascript
@@ -1431,7 +2415,7 @@ async function saveGeneratedReport(report) { /* ... */ }
 
 ```mermaid
 sequenceDiagram
-arjun-module2-sdd-tdd
+
     participant M1 as Module 1 / File
     participant R as Input Reader
     participant P as Processor
@@ -1459,7 +2443,7 @@ arjun-module2-sdd-tdd
         DB-->>P: Commit successful
         M3->>DB: Read structured data
     end
-=======
+
     participant FE as React Frontend
     participant API as Express API
     participant SVC as Report Service
@@ -1490,7 +2474,7 @@ arjun-module2-sdd-tdd
 
 ## 9. Internal Data Models
 
-arjun-module2-sdd-tdd
+
 ### Project Input Model
 
 ```python
@@ -1539,7 +2523,7 @@ class ProcessingResult(BaseModel):
     errors: list[ValidationIssue]
     warnings: list[ValidationIssue]
     generated_sections: list[str]
-=======
+
 ### Report Request Model
 
 ```javascript
@@ -1572,7 +2556,7 @@ const GeneratedReport = {
 
 ## 10. Database Design
 
-arjun-module2-sdd-tdd
+
 ### Project Table
 
 | Field | Type |
@@ -1857,7 +2841,7 @@ If any critical database operation fails:
 ---
 
 ## 20. Logging and Audit
-=======
+
 ### Report Template Table
 
 | Field | Type |
@@ -2017,7 +3001,7 @@ No internal stack trace should be shown to normal users. Each failure is recorde
 Suggested log information:
 
 - Timestamp
-arjun-module2-sdd-tdd
+
 - Project ID
 - Processing step
 - Number of records
@@ -2087,7 +3071,7 @@ No real client data should be stored in migration files.
 - Transaction rollback
 - Reprocessing
 - Module 3 data retrieval
-=======
+
 - Request id
 - Report type and template version
 - Pipeline stage
@@ -2129,7 +3113,6 @@ Audit events:
 
 | ID | Test | Expected Result |
 |---|---|---|
-arjun-module2-sdd-tdd
 | TC-01 | Valid project | Processed and stored |
 | TC-02 | Missing project name | Validation error |
 | TC-03 | Negative lease area | Validation error |
@@ -2144,7 +3127,7 @@ arjun-module2-sdd-tdd
 ---
 
 ## 24. Dev Container and Setup
-=======
+
 | TC-01 | Valid request with complete data | Accepted, then ready with a working URL |
 | TC-02 | Missing template code | Validation error, no request created |
 | TC-03 | Non-existent project | Error, no generation attempted |
@@ -2166,7 +3149,7 @@ arjun-module2-sdd-tdd
 Expected dependencies:
 
 ```text
-arjun-module2-sdd-tdd
+
 pydantic
 sqlalchemy
 alembic
@@ -2183,7 +3166,7 @@ Example environment variable:
 DATABASE_URL=postgresql+asyncpg://user:password@host:5432/database
 ```
 
-=======
+
 express
 puppeteer
 pg
@@ -2215,7 +3198,7 @@ npm ls --depth=0
 ss -tulnp | egrep ':(8000|5173|5432)'
 ```
 
-arjun-module2-sdd-tdd
+
 Module 2 itself does not require port 8000 because it does not expose an API.
 
 ---
@@ -2250,7 +3233,7 @@ Module 2 itself does not require port 8000 because it does not expose an API.
 10. Alembic migrations are available.
 11. Unit and integration tests pass.
 12. Module 3 can read structured output.
-=======
+
 ---
 
 ## 20. Risks and Mitigation
@@ -2289,7 +3272,7 @@ Module 2 itself does not require port 8000 because it does not expose an API.
 
 ---
 
-arjun-module2-sdd-tdd
+
 ## 27. Future Technical Improvements
 
 - Configurable validation-rule files
@@ -2300,7 +3283,7 @@ arjun-module2-sdd-tdd
 - Reference-data caching
 - Processing metrics
 - More sectors beyond mining
-=======
+
 ## 22. Future Technical Improvements
 
 - A job queue with workers so generation survives a restart
@@ -2310,4 +3293,3 @@ arjun-module2-sdd-tdd
 - Digital signing of generated reports
 - Template preview screen
 - Generation metrics and dashboards
-
