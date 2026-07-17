@@ -31,10 +31,8 @@ curl http://localhost:5173
 pg_isready -h localhost -p 5432
 
 
-# Development Must Dos
-Switch to "development" branch when writing code, do not push/merge in "main" branch.
 
-
+---
 
 # Module 1: Scheduled EC/FC Mining Clearance Scraper
 
@@ -3428,12 +3426,3 @@ ss -tulnp | egrep ':(8000|5173|5432)'
 - Digital signing of generated reports
 - Template preview screen
 - Generation metrics and dashboards
-
-
-
-
-
-
-
-
-
