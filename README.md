@@ -31,6 +31,7 @@ curl http://localhost:5173
 pg_isready -h localhost -p 5432
 
 
+
 ---
 
 # Module 1: Scheduled EC/FC Mining Clearance Scraper
@@ -1018,13 +1019,7 @@ docs: add module 1 SDD and TDD
 ```
 
 
-
-# Development Must Dos
-Switch to "development" branch when writing code, do not push/merge in "main" branch.
-
-
-
-
+---
 
 # Module 2: Data Processing and Compliance Structuring
 
@@ -1032,32 +1027,18 @@ Module 2 receives raw mining-project and environmental-compliance data from Modu
 
 This README contains the complete Software Design Document and Technical Design Document for Module 2. It follows the project rule that Module 2 does not use external Application Programming Interfaces.
 
-# Module 3: Generate PDF Reports and Display Them on the React Frontend
-
-Module 3 takes the structured, validated compliance data produced by Module 2 and turns it into a finished PDF report that a user can read, download, and print directly inside the React frontend. Where Module 2 stops at "clean, structured sections stored in the database", Module 3 begins: it binds that data into a report template, renders a well formatted PDF on the server, stores the file, and streams it back to the browser for inline viewing.
-
-This README contains the complete Software Design Document and Technical Design Document for Module 3. Module 3 is the report generation and presentation module, so unlike Module 2 it does expose a small backend service that the React frontend calls to request and retrieve reports.
-
-
 ---
 
 # **SOFTWARE DESIGN DOCUMENT (SDD) STARTS HERE**
 
-
 > **Module:** Data Extraction, Processing, Validation, and Compliance Document Structuring  
 > **Project:** MACE — Mining Automated Compliance Execution  
 > **Architecture Rule:** No external API-based communication  
-
-> **Module:** Generate PDF Reports and Display Them on the React Frontend
-> **Project:** MACE — Mining Automated Compliance Execution
-> **Prepared By:** Kirtika (2023A7PS0219U)
-> **Standard:** IEEE Std 1016 — Software Design Descriptions
 > **Status:** Draft for review
 
 ---
 
 ## 1. Module Overview
-
 
 Module 2 is responsible for receiving mining-project and environmental-compliance data, validating it, cleaning it, organizing it, and mapping it into structured compliance sections.
 
@@ -1078,27 +1059,9 @@ The module supports data related to:
 - Socio-economic studies
 - Environmental Clearance documentation
 
-Module 3 is responsible for converting structured compliance data into a styled PDF report and presenting that report to the user inside the React single page application.
-
-The module spans two tiers. On the backend it exposes a report service that accepts a report request, reads the structured data prepared by Module 2, binds it into a report template, and renders a PDF. On the frontend it provides a dashboard where the user requests a report, watches its status, and finally views the finished PDF inline with options to download and print.
-
-The module is designed to be report-type agnostic. A new report type is added by supplying a new template and a query. The generation pipeline itself does not change.
-
-Module 3 supports reports such as:
-
-- Project Description report
-- Baseline Environmental Condition report
-- Environmental Impact Assessment summary
-- Environmental Management Plan report
-- Ecology and Biodiversity report
-- Socio-Economic report
-- Compliance Summary report
-
-
 ---
 
 ## 2. Purpose
-
 
 The purpose of Module 2 is to convert raw and unorganized compliance data into a clean, validated, and structured format that can be used by later modules.
 
@@ -1111,21 +1074,9 @@ The module reduces:
 - Incorrect field formats
 - Difficulty in preparing compliance sections
 
-The purpose of Module 3 is to give users a reliable, repeatable way to produce a formatted compliance report from data that already exists in the system, and to read that report without leaving the application.
-
-The module reduces:
-
-- Manual copying of data into word processors
-- Inconsistent report formatting between users
-- Time spent producing routine compliance documents
-- Version confusion between the data and the printed report
-- Dependence on desktop tools to view or print reports
-
-
 ---
 
 ## 3. Objectives
-
 
 - Accept project data from Module 1, files, or database records.
 - Validate required fields.
@@ -1137,23 +1088,11 @@ The module reduces:
 - Provide processed data to Module 3.
 - Maintain warnings, errors, and source references.
 
-- Accept a report request from the React frontend.
-- Validate the request and the requesting user's access.
-- Read structured compliance data produced by Module 2.
-- Bind the data into a report template.
-- Render a well formatted PDF on the server.
-- Store the generated PDF and record a reference to it.
-- Return the report to the frontend for inline viewing.
-- Allow the user to download and print the report.
-- Keep a record of who generated which report and when.
-
-
 ---
 
 ## 4. Scope
 
 ### 4.1 Included
-
 
 - Mining project information
 - Project location and lease details
@@ -1180,35 +1119,12 @@ The module reduces:
 - Final report generation
 - User authentication owned by another module
 
-- Report request handling
-- Report type selection
-- Reading structured data from Module 2
-- Template binding
-- Server side PDF generation
-- Storage of generated PDF files
-- Report status tracking
-- Inline PDF viewing in React
-- Download and print actions
-- Error and failure states
-- Audit of report generation
-
-### 4.2 Not Included
-
-- Creation or correction of the source business data (owned by Module 2)
-- Authentication mechanics (owned by the shared security module)
-- Long term archival and retention policy
-- Direct submission of reports to government portals
-- Editing of the PDF inside the browser
-- Automatic content writing of the report body
-
-
 ---
 
 ## 5. Stakeholders and Users
 
 | User / Stakeholder | Role |
 |---|---|
-
 | Environmental consultant | Reviews processed information |
 | Compliance team | Checks completeness and correctness |
 | Project coordinator | Tracks project status |
@@ -1216,15 +1132,6 @@ The module reduces:
 | Module 1 | Supplies raw or extracted data |
 | Module 3 | Uses structured output |
 | Administrator | Maintains reference values |
-
-| Environmental consultant | Requests and reads compliance reports |
-| Compliance team | Reviews generated reports before submission |
-| Project coordinator | Tracks which reports have been produced |
-| Reviewer | Reads the PDF and approves or returns it |
-| Module 2 | Supplies structured compliance data |
-| Shared security module | Issues and validates access tokens |
-| Administrator | Maintains report templates and types |
-
 | Developer | Implements and tests the module |
 
 ---
@@ -1233,7 +1140,6 @@ The module reduces:
 
 | ID | Requirement |
 |---|---|
-
 | FR-01 | The module shall receive data from files, internal functions, or shared database tables. |
 | FR-02 | The module shall validate mandatory project fields. |
 | FR-03 | The module shall validate data types and numerical ranges. |
@@ -1249,29 +1155,12 @@ The module reduces:
 | FR-13 | The module shall allow correction and reprocessing. |
 | FR-14 | The module shall store processing status and timestamps. |
 
-| FR-01 | The module shall accept a report request specifying a project and a report type. |
-| FR-02 | The module shall validate the request payload before any work begins. |
-| FR-03 | The module shall confirm the user is allowed to access the requested project. |
-| FR-04 | The module shall read the structured compliance data from Module 2. |
-| FR-05 | The module shall bind the data into the selected report template. |
-| FR-06 | The module shall render a PDF document from the bound template. |
-| FR-07 | The module shall store the generated PDF in file or object storage. |
-| FR-08 | The module shall record report metadata and a reference to the stored file. |
-| FR-09 | The module shall return the report status to the frontend. |
-| FR-10 | The module shall render the PDF inline in the React frontend. |
-| FR-11 | The module shall allow the user to download the report. |
-| FR-12 | The module shall allow the user to print the report. |
-| FR-13 | The module shall allow a failed report to be retried. |
-| FR-14 | The module shall record who requested each report and when. |
-
-
 ---
 
 ## 7. Non-Functional Requirements
 
 | ID | Category | Requirement |
 |---|---|---|
-
 | NFR-01 | Maintainability | Processing logic shall be divided into separate Python modules. |
 | NFR-02 | Reliability | One invalid record shall not damage other valid records. |
 | NFR-03 | Security | Database credentials shall remain outside source control. |
@@ -1281,20 +1170,9 @@ The module reduces:
 | NFR-07 | Auditability | Source, status, and processing results shall be traceable. |
 | NFR-08 | Performance | Normal project datasets shall process without unnecessary delay. |
 
-| NFR-01 | Responsiveness | The frontend shall stay usable while a report is generating. |
-| NFR-02 | Reliability | A failure at any stage shall produce a clear, recoverable state. |
-| NFR-03 | Security | Storage and database credentials shall remain outside source control. |
-| NFR-04 | Testability | Template binding and PDF rendering shall support automated testing. |
-| NFR-05 | Portability | The module shall run inside the project Dev Container. |
-| NFR-06 | Correctness | The generated PDF shall faithfully reflect the underlying data. |
-| NFR-07 | Reusability | New report types shall be added through templates, not pipeline changes. |
-| NFR-08 | Auditability | Report requests and generations shall be traceable. |
-
-
 ---
 
 ## 8. Use Cases
-
 
 ### 8.1 Process New Project Data
 
@@ -1320,38 +1198,12 @@ The module reduces:
 2. Module 2 checks whether the data is ready.
 3. Approved structured sections are returned.
 
-### 8.1 Generate a Report
-
-1. The user opens the report dashboard.
-2. The user selects a project and a report type.
-3. The frontend sends a report request.
-4. The backend validates and authorizes the request.
-5. The backend reads the structured data and renders a PDF.
-6. The PDF is stored and marked ready.
-7. The frontend loads the PDF inline.
-
-### 8.2 View, Download, and Print
-
-1. The user opens a ready report.
-2. The PDF renders inside the viewer.
-3. The user downloads the file if required.
-4. The user prints the file if required.
-
-### 8.3 Handle a Failed Report
-
-1. Generation fails at some stage.
-2. The report is marked failed with a reason.
-3. The user sees a clear error and a retry action.
-4. The user retries without re-entering the request.
-
-
 ---
 
 ## 9. High-Level Architecture
 
 ```mermaid
 flowchart LR
-
     A[Module 1 / Input Files / Shared Database] --> B[Python Input Reader]
     B --> C[Validation Layer]
     C --> D[Normalization Layer]
@@ -1385,41 +1237,6 @@ flowchart TD
     K --> L[Save structured data]
     L --> M[Update processing status]
     M --> N[Make data available to Module 3]
-
-    A[React Frontend] --> B[Report API Layer]
-    B --> C[Validation and Authorization]
-    C --> D[Report Service]
-    D --> E[(Module 2 Structured Data)]
-    D --> F[Template Engine]
-    F --> G[PDF Generation]
-    G --> H[(Object Storage)]
-    H --> I[React PDF Viewer]
-    D --> J[Errors and Status]
-```
-
-The data flow is unidirectional. The frontend talks only to the API layer and never reaches the database or storage directly.
-
----
-
-## 10. Report Generation Workflow
-
-```mermaid
-flowchart TD
-    A[Receive report request] --> B{Payload valid?}
-    B -- No --> C[Return validation error]
-    B -- Yes --> D{User authorized?}
-    D -- No --> E[Return access error]
-    D -- Yes --> F[Mark request as generating]
-    F --> G{Required data available?}
-    G -- No --> H[Mark failed with reason]
-    G -- Yes --> I[Bind data into template]
-    I --> J[Render PDF]
-    J --> K{Render succeeded?}
-    K -- No --> H
-    K -- Yes --> L[Store PDF]
-    L --> M[Mark ready and save reference]
-    M --> N[Frontend loads PDF viewer]
-
 ```
 
 ---
@@ -1428,7 +1245,6 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-
     M1[Module 1] -->|Files / Shared Tables / Internal Objects| M2[Module 2]
     M2 -->|Errors and Missing Fields| M1
     M2 -->|Structured Database Records| M3[Module 3]
@@ -1436,20 +1252,9 @@ flowchart LR
 
 No HTTP requests or external API calls are required.
 
-    SEC[Shared Security Module] -->|Validated token| M3[Module 3]
-    M2[Module 2] -->|Structured compliance data| M3
-    M3 -->|Report request and status| FE[React Frontend]
-    M3 -->|PDF file| ST[(Object Storage)]
-    ST -->|Signed URL| FE
-```
-
-Module 3 reads Module 2 data and does not modify it.
-
-
 ---
 
 ## 12. Component Design
-
 
 ### 12.1 Input Reader
 
@@ -1522,38 +1327,12 @@ Stores:
 - Processing status
 - Source references
 
-### 12.1 Report API
-
-Exposes the report endpoints, checks the access token, validates the payload, and shapes the HTTP response. Contains no business logic.
-
-### 12.2 Report Service
-
-Orchestrates the pipeline: read data, bind template, render PDF, store file, update status. Owns the lifecycle of a report request.
-
-### 12.3 Template Engine
-
-Merges a data object into an HTML report template and returns populated HTML. Has no knowledge of PDF or storage.
-
-### 12.4 PDF Generator
-
-Converts populated HTML into a PDF document. Has no knowledge of the database.
-
-### 12.5 Storage Component
-
-Writes the PDF to object storage and returns a retrievable URL.
-
-### 12.6 Frontend Viewer
-
-Renders the PDF inline and provides download and print actions, along with generating and failed states.
-
-
 ---
 
 ## 13. Data Flow Design
 
 ```mermaid
 flowchart LR
-
     F1[Input File] --> P[Module 2 Processing]
     D1[(Shared Raw Data Tables)] --> P
     M1[Module 1 Internal Output] --> P
@@ -1561,15 +1340,6 @@ flowchart LR
     P --> D3[(Validation Results)]
     P --> D4[(Compliance Sections)]
     D4 --> M3[Module 3]
-
-    R[Report Request] --> S[Report Service]
-    D1[(Module 2 Structured Data)] --> S
-    T[Report Template] --> S
-    S --> P[Populated HTML]
-    P --> PDF[PDF Buffer]
-    PDF --> ST[(Object Storage)]
-    ST --> V[React PDF Viewer]
-    S --> M[(Report Metadata)]
 ```
 
 ---
@@ -1578,7 +1348,6 @@ flowchart LR
 
 ```mermaid
 erDiagram
-
     PROJECT ||--o{ ENVIRONMENTAL_OBSERVATION : contains
     PROJECT ||--o{ VALIDATION_RESULT : has
     PROJECT ||--o{ COMPLIANCE_SECTION : produces
@@ -1634,41 +1403,6 @@ erDiagram
         string source_type
         uuid source_id
         text structured_content
-
-    REPORT_TEMPLATE ||--o{ REPORT_REQUEST : defines
-    REPORT_REQUEST ||--o| GENERATED_REPORT : produces
-    PROJECT ||--o{ REPORT_REQUEST : has
-
-    REPORT_TEMPLATE {
-        uuid template_id PK
-        string template_code
-        string template_name
-        string template_file
-        string version
-        boolean is_active
-    }
-
-    REPORT_REQUEST {
-        uuid request_id PK
-        uuid project_id FK
-        uuid template_id FK
-        string requested_by
-        string status
-        text error_message
-        datetime requested_at
-        datetime completed_at
-    }
-
-    GENERATED_REPORT {
-        uuid report_id PK
-        uuid request_id FK
-        string storage_key
-        string file_url
-        int file_size_bytes
-        int page_count
-        string template_version
-        datetime generated_at
-
     }
 ```
 
@@ -1680,7 +1414,6 @@ erDiagram
 
 ```json
 {
-
   "project_name": "Example Limestone Mining Project",
   "proponent_name": "Example Minerals Private Limited",
   "mineral_type": "Limestone",
@@ -1690,15 +1423,6 @@ erDiagram
   "production_capacity_unit": "MTPA",
   "district": "Example District",
   "state": "Example State"
-
-  "project_id": "example-project-uuid",
-  "template_code": "COMPLIANCE_SUMMARY",
-  "options": {
-    "include_annexures": true,
-    "period_from": "2026-01-01",
-    "period_to": "2026-06-30"
-  }
-
 }
 ```
 
@@ -1706,7 +1430,6 @@ erDiagram
 
 ```json
 {
-
   "project_id": "generated-uuid",
   "processing_status": "READY_WITH_WARNINGS",
   "validation_summary": {
@@ -1723,14 +1446,6 @@ erDiagram
       "status": "INCOMPLETE"
     }
   ]
-
-  "request_id": "generated-uuid",
-  "status": "ready",
-  "file_url": "https://storage.example.com/reports/generated-uuid.pdf",
-  "page_count": 24,
-  "file_size_bytes": 862140,
-  "generated_at": "2026-06-29T10:22:41Z"
-
 }
 ```
 
@@ -1740,7 +1455,6 @@ erDiagram
 
 | Rule ID | Rule |
 |---|---|
-
 | VR-01 | Project name is mandatory. |
 | VR-02 | Proponent name is mandatory. |
 | VR-03 | Mineral type is mandatory. |
@@ -1754,20 +1468,9 @@ erDiagram
 | VR-11 | Critical errors must block approval. |
 | VR-12 | Every structured value must retain a source reference. |
 
-| VR-01 | Project identifier is mandatory. |
-| VR-02 | Report type code is mandatory. |
-| VR-03 | The report type must exist and be active. |
-| VR-04 | The project must exist and be accessible to the user. |
-| VR-05 | Required compliance sections must exist before generation. |
-| VR-06 | Status must be one of generating, ready, or failed. |
-| VR-07 | A failed request must record an error message. |
-| VR-08 | A stored report reference is written only after upload succeeds. |
-
-
 ---
 
 ## 17. Error Handling
-
 
 The module shall use:
 
@@ -1786,32 +1489,11 @@ Each issue should include:
 - Message
 - Source record reference
 
-The module shall handle:
-
-- Invalid request payloads
-- Unauthorized project access
-- Missing required compliance data
-- Template binding failures
-- PDF rendering failures or timeouts
-- Storage upload failures
-- Viewer load failures on the frontend
-
-Each failure should record:
-
-- The stage that failed
-- A clear message
-- The request reference
-- The report type and template version where relevant
-
-A request is never left silently stuck in the generating state, and a partial PDF is never presented as a finished report.
-
-
 ---
 
 ## 18. Security
 
 - `.env` must not be committed.
-
 - Database credentials must be stored in environment variables.
 - Only authorized users or modules may edit approved records.
 - Sensitive client information must not be printed in logs.
@@ -1819,21 +1501,11 @@ A request is never left silently stuck in the generating state, and a partial PD
 - Database changes should be traceable.
 - Approved records must not be silently overwritten.
 
-- Storage and database credentials must be read from environment variables.
-- All traffic must use HTTPS.
-- Generated PDFs must be stored in a private location and served through short lived signed URLs.
-- Every report endpoint must validate the access token.
-- Project access must be checked on the server for every request, including file retrieval.
-- Sensitive site data must not be written to world readable temporary locations.
-- Report access must be traceable.
-
-
 ---
 
 ## 19. Assumptions and Dependencies
 
 ### Assumptions
-
 
 - Module 1 supplies data in an agreed format.
 - Module 3 reads structured information from shared tables or internal functions.
@@ -1859,33 +1531,9 @@ A request is never left silently stuck in the generating state, and a partial PD
 - No legal approval decision.
 - No final report-generation responsibility.
 
-- Module 2 supplies validated, structured compliance data.
-- The shared security module issues and validates access tokens.
-- A human reviewer remains responsible for final report correctness.
-- Initial reporting focuses on mining compliance documents.
-
-### Dependencies
-
-- Node.js and Express
-- Puppeteer with a headless browser
-- A template engine for HTML report layouts
-- PostgreSQL for report metadata
-- Object storage for PDF files
-- React with react-pdf for the frontend
-- Docker Desktop and the VS Code Dev Container
-
-### Constraints
-
-- No editing of PDF content in the browser.
-- No direct government portal submission.
-- No responsibility for creating the source data.
-- No ownership of authentication.
-
-
 ---
 
 ## 20. Acceptance Criteria
-
 
 1. Valid project data is processed successfully.
 2. Missing required fields produce clear errors.
@@ -1900,24 +1548,9 @@ A request is never left silently stuck in the generating state, and a partial PD
 11. Core Python functions are tested.
 12. No API dependency is required.
 
-1. A user can request a report from the React dashboard.
-2. The request is validated and authorized.
-3. Structured Module 2 data is read correctly.
-4. A well formatted PDF is generated.
-5. The PDF is stored and referenced.
-6. The report renders inline in the frontend.
-7. The user can download and print the report.
-8. The frontend stays usable while generating.
-9. Every failure produces a clear, recoverable state.
-10. A user cannot access a report for a project they are not assigned to.
-11. Each report records who requested it and which template version was used.
-12. A new report type can be added through a template.
-
-
 ---
 
 ## 21. Future Enhancements
-
 
 - Additional file formats
 - Configurable validation rules
@@ -1927,35 +1560,18 @@ A request is never left silently stuck in the generating state, and a partial PD
 - Additional industries beyond mining
 - Intelligent section suggestions
 
-- Additional report types and templates
-- Scheduled and automatic report generation
-- Export to Word in addition to PDF
-- Digital signing of generated reports
-- Template preview before full generation
-- Report comparison across periods
-- Reviewer approval workflow inside the viewer
-
-
 ---
 
 # **TECHNICAL DESIGN DOCUMENT (TDD) STARTS HERE**
 
-
 > **Module:** Data Extraction, Processing, Validation, and Compliance Document Structuring  
 > **Project:** MACE — Mining Automated Compliance Execution  
 > **Architecture Rule:** No external API-based communication  
-
-> **Module:** Generate PDF Reports and Display Them on the React Frontend
-> **Project:** MACE — Mining Automated Compliance Execution
-> **Prepared By:** Kirtika (2023A7PS0219U)
-> **Technology Focus:** Node.js and Express backend, Puppeteer PDF generation, React frontend
-
 > **Status:** Draft for review
 
 ---
 
 ## 1. Technical Overview
-
 
 Module 2 is designed as an internal Python processing module.
 
@@ -1972,30 +1588,11 @@ The module performs:
 - Data-quality evaluation
 - Output preparation for Module 3
 
-Module 3 is designed as a report generation and presentation module.
-
-On the backend it runs a small Node.js and Express service that exposes report endpoints to the React frontend. It reads structured compliance data prepared by Module 2, binds that data into an HTML report template, and uses Puppeteer to render the template into a PDF document. The PDF is stored in object storage and a reference is saved in the database.
-
-On the frontend it uses React with react-pdf to render the generated report inline, along with download and print actions.
-
-The module performs:
-
-- Report request handling
-- Validation and authorization
-- Data reading from Module 2
-- Template binding
-- PDF rendering with Puppeteer
-- Storage and metadata recording
-- Status reporting
-- Inline rendering in React
-
-
 ---
 
 ## 2. Technical Scope
 
 ### Included
-
 
 - Python file readers
 - Internal processing functions
@@ -2007,21 +1604,10 @@ The module performs:
 - SQLAlchemy models
 - PostgreSQL storage
 - Alembic migrations
-
-- Express report routes and controllers
-- Request validation
-- Report orchestration service
-- HTML template engine integration
-- Puppeteer PDF rendering
-- Object storage access
-- Report metadata tables
-- React report dashboard and viewer
-
 - Unit and integration tests
 - Dev Container execution
 
 ### Excluded
-
 
 - FastAPI routers
 - HTTP endpoints
@@ -2032,20 +1618,12 @@ The module performs:
 - Final report generation
 - Authentication implementation
 
-- Creation of source business data
-- Authentication implementation
-- Browser side PDF editing
-- Direct PARIVESH integration
-- Long term archival policy
-
-
 ---
 
 ## 3. Technology Stack
 
 | Area | Technology | Purpose |
 |---|---|---|
-
 | Language | Python | Core module development |
 | Validation | Pydantic | Internal data models and validation |
 | Database | PostgreSQL | Persistent storage |
@@ -2057,23 +1635,12 @@ The module performs:
 | Testing | pytest | Unit and integration testing |
 | Browser testing | Playwright, if needed | Only for project-level user-interface tests |
 
-| Backend runtime | Node.js with Express | Expose report endpoints and orchestrate generation |
-| PDF rendering | Puppeteer | Render HTML report templates into PDF |
-| Templating | HTML template engine | Bind compliance data into report layouts |
-| Database | PostgreSQL | Store report request and generated report metadata |
-| Storage | Object storage (S3 compatible) | Store generated PDF files |
-| Frontend | React with react-pdf | Request reports and render PDFs inline |
-| Container | Docker Dev Container | Reproducible environment |
-| Testing | Jest and integration tests | Unit and integration testing |
-
-
 ---
 
 ## 4. Technical Architecture
 
 ```mermaid
 flowchart TB
-
     subgraph Inputs
         F[CSV / Excel / JSON Files]
         D[(Shared Raw Database Tables)]
@@ -2110,46 +1677,11 @@ flowchart TB
     RP --> DB
     DB --> M3
     QS --> LG
-
-    subgraph Frontend
-        DASH[Report Dashboard]
-        VIEW[React PDF Viewer]
-    end
-
-    subgraph Module_3_Backend
-        API[Express Routes and Controllers]
-        VAL[Validation and Authorization]
-        SVC[Report Service]
-        TMP[Template Engine]
-        PDF[Puppeteer PDF Generator]
-        REPO[Report Repository]
-        STG[Storage Client]
-    end
-
-    subgraph Storage_and_Sources
-        M2[(Module 2 Structured Data)]
-        DB[(PostgreSQL Metadata)]
-        OBJ[(Object Storage)]
-    end
-
-    DASH --> API
-    API --> VAL
-    VAL --> SVC
-    SVC --> M2
-    SVC --> TMP
-    TMP --> PDF
-    PDF --> STG
-    STG --> OBJ
-    SVC --> REPO
-    REPO --> DB
-    OBJ --> VIEW
-
 ```
 
 ---
 
 ## 5. Design Principles
-
 
 ### 5.1 No API Layer
 
@@ -2176,33 +1708,11 @@ Every processed record retains its source.
 
 Related database changes are committed together.
 
-### 5.1 Separation of Responsibilities
-
-Data reading, template binding, PDF rendering, storage, and display are separate units with defined interfaces.
-
-### 5.2 Report Type Agnostic Pipeline
-
-The pipeline does not change per report type. A report type is a template plus a query.
-
-### 5.3 Asynchronous Generation
-
-A report request returns immediately with a status so the frontend stays responsive.
-
-### 5.4 Reuse of the Browser Instance
-
-A single Puppeteer browser is reused across requests because launching is the dominant cost.
-
-### 5.5 Traceability
-
-Every generated report records the template version used, so an old report can be explained.
-
-
 ---
 
 ## 6. Proposed Folder Structure
 
 ```text
-
 backend/
 ├── module2/
 │   ├── __init__.py
@@ -2238,37 +1748,6 @@ backend/
 │   ├── unit/
 │   └── integration/
 └── alembic/
-
-module3/
-├── api/
-│   ├── reportRoutes.js
-│   ├── reportController.js
-│   └── validators.js
-├── services/
-│   ├── reportService.js
-│   ├── templateService.js
-│   └── pdfService.js
-├── data/
-│   ├── reportRepository.js
-│   └── complianceRepository.js
-├── storage/
-│   └── objectStorage.js
-├── templates/
-│   ├── base.html
-│   └── compliance_report.html
-├── utils/
-│   ├── logger.js
-│   └── errors.js
-└── tests/
-    ├── unit/
-    └── integration/
-
-frontend/src/module3/
-├── ReportDashboard.jsx
-├── ReportViewer.jsx
-├── ReportStatus.jsx
-└── api/reportApi.js
-
 ```
 
 This is a proposed structure and should be adjusted to the final MACE repository.
@@ -2276,7 +1755,6 @@ This is a proposed structure and should be adjusted to the final MACE repository
 ---
 
 ## 7. Main Components
-
 
 ### 7.1 Input Reader
 
@@ -2360,53 +1838,6 @@ class ProjectRepository:
 
     async def get_project(self, session, project_id):
         ...
-
-### 7.1 Report Controller
-
-```javascript
-async function requestReport(req, res) {
-  // validate payload, authorize user,
-  // create request, trigger generation,
-  // return 202 with request id
-}
-```
-
-### 7.2 Report Service
-
-```javascript
-async function generateReport(requestId) {
-  // read compliance data
-  // bind template
-  // render pdf
-  // store file
-  // update status
-}
-```
-
-### 7.3 Template Service
-
-```javascript
-function renderTemplate(templateCode, data) {
-  // return populated HTML string
-}
-```
-
-### 7.4 PDF Service
-
-```javascript
-async function htmlToPdf(html) {
-  // render HTML in headless browser
-  // return PDF buffer
-}
-```
-
-### 7.5 Report Repository
-
-```javascript
-async function createRequest(request) { /* ... */ }
-async function updateStatus(requestId, status) { /* ... */ }
-async function saveGeneratedReport(report) { /* ... */ }
-
 ```
 
 ---
@@ -2415,7 +1846,6 @@ async function saveGeneratedReport(report) { /* ... */ }
 
 ```mermaid
 sequenceDiagram
-
     participant M1 as Module 1 / File
     participant R as Input Reader
     participant P as Processor
@@ -2443,37 +1873,11 @@ sequenceDiagram
         DB-->>P: Commit successful
         M3->>DB: Read structured data
     end
-
-    participant FE as React Frontend
-    participant API as Express API
-    participant SVC as Report Service
-    participant M2 as Module 2 Data
-    participant PDF as Puppeteer
-    participant ST as Object Storage
-    participant DB as PostgreSQL
-
-    FE->>API: POST report request
-    API->>API: Validate and authorize
-    API->>DB: Create request (generating)
-    API-->>FE: 202 Accepted with request id
-    API->>SVC: Start generation
-    SVC->>M2: Read structured data
-    M2-->>SVC: Compliance sections
-    SVC->>PDF: Render bound template
-    PDF-->>SVC: PDF buffer
-    SVC->>ST: Upload PDF
-    ST-->>SVC: Storage key and URL
-    SVC->>DB: Update request (ready)
-    FE->>API: GET report status
-    API-->>FE: Ready with file URL
-    FE->>ST: Load PDF into viewer
-
 ```
 
 ---
 
 ## 9. Internal Data Models
-
 
 ### Project Input Model
 
@@ -2523,39 +1927,11 @@ class ProcessingResult(BaseModel):
     errors: list[ValidationIssue]
     warnings: list[ValidationIssue]
     generated_sections: list[str]
-
-### Report Request Model
-
-```javascript
-const ReportRequest = {
-  requestId: "uuid",
-  projectId: "uuid",
-  templateCode: "string",
-  requestedBy: "string",
-  status: "generating | ready | failed",
-  errorMessage: "string | null"
-};
-```
-
-### Generated Report Model
-
-```javascript
-const GeneratedReport = {
-  reportId: "uuid",
-  requestId: "uuid",
-  storageKey: "string",
-  fileUrl: "string",
-  fileSizeBytes: 0,
-  pageCount: 0,
-  templateVersion: "string"
-};
-
 ```
 
 ---
 
 ## 10. Database Design
-
 
 ### Project Table
 
@@ -2842,6 +2218,920 @@ If any critical database operation fails:
 
 ## 20. Logging and Audit
 
+Suggested log information:
+
+- Timestamp
+- Project ID
+- Processing step
+- Number of records
+- Error count
+- Warning count
+- Final status
+- Processing duration
+
+Audit events:
+
+- Data imported
+- Data corrected
+- Project reprocessed
+- Validation status changed
+- Compliance sections generated
+- Approved data modified
+
+---
+
+## 21. Performance Considerations
+
+- Process records in batches.
+- Avoid one database query per row.
+- Use bulk insert where appropriate.
+- Add database indexes.
+- Cache stable reference values.
+- Avoid reading the same file repeatedly.
+- Use asynchronous database sessions.
+- Support future background processing for large files.
+
+---
+
+## 22. Database Migrations
+
+Alembic should manage:
+
+1. Project table
+2. Environmental observation table
+3. Validation result table
+4. Compliance section table
+5. Section item table
+6. Foreign keys
+7. Indexes
+8. Reference data tables if required
+
+No real client data should be stored in migration files.
+
+---
+
+## 23. Testing Strategy
+
+### Unit Tests
+
+- Required-field validation
+- Positive number validation
+- Date normalization
+- Unit normalization
+- Duplicate detection
+- Classification
+- Mapping
+- Processing-status calculation
+
+### Integration Tests
+
+- File reading to database storage
+- Shared database input processing
+- Transaction rollback
+- Reprocessing
+- Module 3 data retrieval
+
+### Test Cases
+
+| ID | Test | Expected Result |
+|---|---|---|
+| TC-01 | Valid project | Processed and stored |
+| TC-02 | Missing project name | Validation error |
+| TC-03 | Negative lease area | Validation error |
+| TC-04 | Unsupported unit | Warning or error |
+| TC-05 | Duplicate observation | Duplicate flagged |
+| TC-06 | Missing optional data | Ready with warning |
+| TC-07 | Database failure | Rollback |
+| TC-08 | Invalid file format | Controlled error |
+| TC-09 | Valid structured data | Module 3 can read it |
+| TC-10 | Critical errors present | Downstream use blocked |
+
+---
+
+## 24. Dev Container and Setup
+
+Expected dependencies:
+
+```text
+pydantic
+sqlalchemy
+alembic
+psycopg2-binary
+asyncpg
+pytest
+pandas
+openpyxl
+```
+
+Example environment variable:
+
+```env
+DATABASE_URL=postgresql+asyncpg://user:password@host:5432/database
+```
+
+Development checks:
+
+```bash
+python3 -m pip check
+npm ls --depth=0
+ss -tulnp | egrep ':(8000|5173|5432)'
+```
+
+Module 2 itself does not require port 8000 because it does not expose an API.
+
+---
+
+## 25. Risks and Mitigation
+
+| Risk | Mitigation |
+|---|---|
+| Input format changes | Use separate readers |
+| Missing data | Structured validation |
+| Duplicate records | Duplicate checks and indexes |
+| Wrong mapping | Preserve source and require review |
+| Database failure | Transactions and rollback |
+| Rule changes | Keep rules modular |
+| Large files | Batch processing |
+| Secret exposure | Environment variables and safe logs |
+| Module mismatch | Shared internal data contract |
+
+---
+
+## 26. Technical Acceptance Criteria
+
+1. No API-based dependency exists.
+2. Data can be read from approved files or shared database tables.
+3. Internal Python models are defined.
+4. Validation returns structured issues.
+5. Normalization is deterministic.
+6. Classification is testable.
+7. Mapping is testable.
+8. Database changes use transactions.
+9. Source references are preserved.
+10. Alembic migrations are available.
+11. Unit and integration tests pass.
+12. Module 3 can read structured output.
+13. Secrets are not committed.
+14. The module runs in the Dev Container.
+15. Mermaid diagrams render correctly on GitHub.
+
+---
+
+## 27. Future Technical Improvements
+
+- Configurable validation-rule files
+- Additional file readers
+- Background processing
+- Versioned project records
+- Reviewer approval workflow
+- Reference-data caching
+- Processing metrics
+- More sectors beyond mining
+
+
+---
+
+# Module 3: Generate PDF Reports and Display Them on the React Frontend
+
+Module 3 takes the structured, validated compliance data produced by Module 2 and turns it into a finished PDF report that a user can read, download, and print directly inside the React frontend. Where Module 2 stops at "clean, structured sections stored in the database", Module 3 begins: it binds that data into a report template, renders a well formatted PDF on the server, stores the file, and streams it back to the browser for inline viewing.
+
+This README contains the complete Software Design Document and Technical Design Document for Module 3. Module 3 is the report generation and presentation module, so unlike Module 2 it does expose a small backend service that the React frontend calls to request and retrieve reports.
+
+---
+
+# **SOFTWARE DESIGN DOCUMENT (SDD) STARTS HERE**
+
+> **Module:** Generate PDF Reports and Display Them on the React Frontend
+> **Project:** MACE — Mining Automated Compliance Execution
+> **Prepared By:** Kirtika (2023A7PS0219U)
+> **Standard:** IEEE Std 1016 — Software Design Descriptions
+> **Status:** Draft for review
+
+---
+
+## 1. Module Overview
+
+Module 3 is responsible for converting structured compliance data into a styled PDF report and presenting that report to the user inside the React single page application.
+
+The module spans two tiers. On the backend it exposes a report service that accepts a report request, reads the structured data prepared by Module 2, binds it into a report template, and renders a PDF. On the frontend it provides a dashboard where the user requests a report, watches its status, and finally views the finished PDF inline with options to download and print.
+
+The module is designed to be report-type agnostic. A new report type is added by supplying a new template and a query. The generation pipeline itself does not change.
+
+Module 3 supports reports such as:
+
+- Project Description report
+- Baseline Environmental Condition report
+- Environmental Impact Assessment summary
+- Environmental Management Plan report
+- Ecology and Biodiversity report
+- Socio-Economic report
+- Compliance Summary report
+
+---
+
+## 2. Purpose
+
+The purpose of Module 3 is to give users a reliable, repeatable way to produce a formatted compliance report from data that already exists in the system, and to read that report without leaving the application.
+
+The module reduces:
+
+- Manual copying of data into word processors
+- Inconsistent report formatting between users
+- Time spent producing routine compliance documents
+- Version confusion between the data and the printed report
+- Dependence on desktop tools to view or print reports
+
+---
+
+## 3. Objectives
+
+- Accept a report request from the React frontend.
+- Validate the request and the requesting user's access.
+- Read structured compliance data produced by Module 2.
+- Bind the data into a report template.
+- Render a well formatted PDF on the server.
+- Store the generated PDF and record a reference to it.
+- Return the report to the frontend for inline viewing.
+- Allow the user to download and print the report.
+- Keep a record of who generated which report and when.
+
+---
+
+## 4. Scope
+
+### 4.1 Included
+
+- Report request handling
+- Report type selection
+- Reading structured data from Module 2
+- Template binding
+- Server side PDF generation
+- Storage of generated PDF files
+- Report status tracking
+- Inline PDF viewing in React
+- Download and print actions
+- Error and failure states
+- Audit of report generation
+
+### 4.2 Not Included
+
+- Creation or correction of the source business data (owned by Module 2)
+- Authentication mechanics (owned by the shared security module)
+- Long term archival and retention policy
+- Direct submission of reports to government portals
+- Editing of the PDF inside the browser
+- Automatic content writing of the report body
+
+---
+
+## 5. Stakeholders and Users
+
+| User / Stakeholder | Role |
+|---|---|
+| Environmental consultant | Requests and reads compliance reports |
+| Compliance team | Reviews generated reports before submission |
+| Project coordinator | Tracks which reports have been produced |
+| Reviewer | Reads the PDF and approves or returns it |
+| Module 2 | Supplies structured compliance data |
+| Shared security module | Issues and validates access tokens |
+| Administrator | Maintains report templates and types |
+| Developer | Implements and tests the module |
+
+---
+
+## 6. Functional Requirements
+
+| ID | Requirement |
+|---|---|
+| FR-01 | The module shall accept a report request specifying a project and a report type. |
+| FR-02 | The module shall validate the request payload before any work begins. |
+| FR-03 | The module shall confirm the user is allowed to access the requested project. |
+| FR-04 | The module shall read the structured compliance data from Module 2. |
+| FR-05 | The module shall bind the data into the selected report template. |
+| FR-06 | The module shall render a PDF document from the bound template. |
+| FR-07 | The module shall store the generated PDF in file or object storage. |
+| FR-08 | The module shall record report metadata and a reference to the stored file. |
+| FR-09 | The module shall return the report status to the frontend. |
+| FR-10 | The module shall render the PDF inline in the React frontend. |
+| FR-11 | The module shall allow the user to download the report. |
+| FR-12 | The module shall allow the user to print the report. |
+| FR-13 | The module shall allow a failed report to be retried. |
+| FR-14 | The module shall record who requested each report and when. |
+
+---
+
+## 7. Non-Functional Requirements
+
+| ID | Category | Requirement |
+|---|---|---|
+| NFR-01 | Responsiveness | The frontend shall stay usable while a report is generating. |
+| NFR-02 | Reliability | A failure at any stage shall produce a clear, recoverable state. |
+| NFR-03 | Security | Storage and database credentials shall remain outside source control. |
+| NFR-04 | Testability | Template binding and PDF rendering shall support automated testing. |
+| NFR-05 | Portability | The module shall run inside the project Dev Container. |
+| NFR-06 | Correctness | The generated PDF shall faithfully reflect the underlying data. |
+| NFR-07 | Reusability | New report types shall be added through templates, not pipeline changes. |
+| NFR-08 | Auditability | Report requests and generations shall be traceable. |
+
+---
+
+## 8. Use Cases
+
+### 8.1 Generate a Report
+
+1. The user opens the report dashboard.
+2. The user selects a project and a report type.
+3. The frontend sends a report request.
+4. The backend validates and authorizes the request.
+5. The backend reads the structured data and renders a PDF.
+6. The PDF is stored and marked ready.
+7. The frontend loads the PDF inline.
+
+### 8.2 View, Download, and Print
+
+1. The user opens a ready report.
+2. The PDF renders inside the viewer.
+3. The user downloads the file if required.
+4. The user prints the file if required.
+
+### 8.3 Handle a Failed Report
+
+1. Generation fails at some stage.
+2. The report is marked failed with a reason.
+3. The user sees a clear error and a retry action.
+4. The user retries without re-entering the request.
+
+---
+
+## 9. High-Level Architecture
+
+```mermaid
+flowchart LR
+    A[React Frontend] --> B[Report API Layer]
+    B --> C[Validation and Authorization]
+    C --> D[Report Service]
+    D --> E[(Module 2 Structured Data)]
+    D --> F[Template Engine]
+    F --> G[PDF Generation]
+    G --> H[(Object Storage)]
+    H --> I[React PDF Viewer]
+    D --> J[Errors and Status]
+```
+
+The data flow is unidirectional. The frontend talks only to the API layer and never reaches the database or storage directly.
+
+---
+
+## 10. Report Generation Workflow
+
+```mermaid
+flowchart TD
+    A[Receive report request] --> B{Payload valid?}
+    B -- No --> C[Return validation error]
+    B -- Yes --> D{User authorized?}
+    D -- No --> E[Return access error]
+    D -- Yes --> F[Mark request as generating]
+    F --> G{Required data available?}
+    G -- No --> H[Mark failed with reason]
+    G -- Yes --> I[Bind data into template]
+    I --> J[Render PDF]
+    J --> K{Render succeeded?}
+    K -- No --> H
+    K -- Yes --> L[Store PDF]
+    L --> M[Mark ready and save reference]
+    M --> N[Frontend loads PDF viewer]
+```
+
+---
+
+## 11. Module Interaction
+
+```mermaid
+flowchart LR
+    SEC[Shared Security Module] -->|Validated token| M3[Module 3]
+    M2[Module 2] -->|Structured compliance data| M3
+    M3 -->|Report request and status| FE[React Frontend]
+    M3 -->|PDF file| ST[(Object Storage)]
+    ST -->|Signed URL| FE
+```
+
+Module 3 reads Module 2 data and does not modify it.
+
+---
+
+## 12. Component Design
+
+### 12.1 Report API
+
+Exposes the report endpoints, checks the access token, validates the payload, and shapes the HTTP response. Contains no business logic.
+
+### 12.2 Report Service
+
+Orchestrates the pipeline: read data, bind template, render PDF, store file, update status. Owns the lifecycle of a report request.
+
+### 12.3 Template Engine
+
+Merges a data object into an HTML report template and returns populated HTML. Has no knowledge of PDF or storage.
+
+### 12.4 PDF Generator
+
+Converts populated HTML into a PDF document. Has no knowledge of the database.
+
+### 12.5 Storage Component
+
+Writes the PDF to object storage and returns a retrievable URL.
+
+### 12.6 Frontend Viewer
+
+Renders the PDF inline and provides download and print actions, along with generating and failed states.
+
+---
+
+## 13. Data Flow Design
+
+```mermaid
+flowchart LR
+    R[Report Request] --> S[Report Service]
+    D1[(Module 2 Structured Data)] --> S
+    T[Report Template] --> S
+    S --> P[Populated HTML]
+    P --> PDF[PDF Buffer]
+    PDF --> ST[(Object Storage)]
+    ST --> V[React PDF Viewer]
+    S --> M[(Report Metadata)]
+```
+
+---
+
+## 14. Data Design
+
+```mermaid
+erDiagram
+    REPORT_TEMPLATE ||--o{ REPORT_REQUEST : defines
+    REPORT_REQUEST ||--o| GENERATED_REPORT : produces
+    PROJECT ||--o{ REPORT_REQUEST : has
+
+    REPORT_TEMPLATE {
+        uuid template_id PK
+        string template_code
+        string template_name
+        string template_file
+        string version
+        boolean is_active
+    }
+
+    REPORT_REQUEST {
+        uuid request_id PK
+        uuid project_id FK
+        uuid template_id FK
+        string requested_by
+        string status
+        text error_message
+        datetime requested_at
+        datetime completed_at
+    }
+
+    GENERATED_REPORT {
+        uuid report_id PK
+        uuid request_id FK
+        string storage_key
+        string file_url
+        int file_size_bytes
+        int page_count
+        string template_version
+        datetime generated_at
+    }
+```
+
+---
+
+## 15. Input and Output Design
+
+### Example Input
+
+```json
+{
+  "project_id": "example-project-uuid",
+  "template_code": "COMPLIANCE_SUMMARY",
+  "options": {
+    "include_annexures": true,
+    "period_from": "2026-01-01",
+    "period_to": "2026-06-30"
+  }
+}
+```
+
+### Example Output
+
+```json
+{
+  "request_id": "generated-uuid",
+  "status": "ready",
+  "file_url": "https://storage.example.com/reports/generated-uuid.pdf",
+  "page_count": 24,
+  "file_size_bytes": 862140,
+  "generated_at": "2026-06-29T10:22:41Z"
+}
+```
+
+---
+
+## 16. Validation Rules
+
+| Rule ID | Rule |
+|---|---|
+| VR-01 | Project identifier is mandatory. |
+| VR-02 | Report type code is mandatory. |
+| VR-03 | The report type must exist and be active. |
+| VR-04 | The project must exist and be accessible to the user. |
+| VR-05 | Required compliance sections must exist before generation. |
+| VR-06 | Status must be one of generating, ready, or failed. |
+| VR-07 | A failed request must record an error message. |
+| VR-08 | A stored report reference is written only after upload succeeds. |
+
+---
+
+## 17. Error Handling
+
+The module shall handle:
+
+- Invalid request payloads
+- Unauthorized project access
+- Missing required compliance data
+- Template binding failures
+- PDF rendering failures or timeouts
+- Storage upload failures
+- Viewer load failures on the frontend
+
+Each failure should record:
+
+- The stage that failed
+- A clear message
+- The request reference
+- The report type and template version where relevant
+
+A request is never left silently stuck in the generating state, and a partial PDF is never presented as a finished report.
+
+---
+
+## 18. Security
+
+- `.env` must not be committed.
+- Storage and database credentials must be read from environment variables.
+- All traffic must use HTTPS.
+- Generated PDFs must be stored in a private location and served through short lived signed URLs.
+- Every report endpoint must validate the access token.
+- Project access must be checked on the server for every request, including file retrieval.
+- Sensitive site data must not be written to world readable temporary locations.
+- Report access must be traceable.
+
+---
+
+## 19. Assumptions and Dependencies
+
+### Assumptions
+
+- Module 2 supplies validated, structured compliance data.
+- The shared security module issues and validates access tokens.
+- A human reviewer remains responsible for final report correctness.
+- Initial reporting focuses on mining compliance documents.
+
+### Dependencies
+
+- Node.js and Express
+- Puppeteer with a headless browser
+- A template engine for HTML report layouts
+- PostgreSQL for report metadata
+- Object storage for PDF files
+- React with react-pdf for the frontend
+- Docker Desktop and the VS Code Dev Container
+
+### Constraints
+
+- No editing of PDF content in the browser.
+- No direct government portal submission.
+- No responsibility for creating the source data.
+- No ownership of authentication.
+
+---
+
+## 20. Acceptance Criteria
+
+1. A user can request a report from the React dashboard.
+2. The request is validated and authorized.
+3. Structured Module 2 data is read correctly.
+4. A well formatted PDF is generated.
+5. The PDF is stored and referenced.
+6. The report renders inline in the frontend.
+7. The user can download and print the report.
+8. The frontend stays usable while generating.
+9. Every failure produces a clear, recoverable state.
+10. A user cannot access a report for a project they are not assigned to.
+11. Each report records who requested it and which template version was used.
+12. A new report type can be added through a template.
+
+---
+
+## 21. Future Enhancements
+
+- Additional report types and templates
+- Scheduled and automatic report generation
+- Export to Word in addition to PDF
+- Digital signing of generated reports
+- Template preview before full generation
+- Report comparison across periods
+- Reviewer approval workflow inside the viewer
+
+---
+
+# **TECHNICAL DESIGN DOCUMENT (TDD) STARTS HERE**
+
+> **Module:** Generate PDF Reports and Display Them on the React Frontend
+> **Project:** MACE — Mining Automated Compliance Execution
+> **Prepared By:** Kirtika (2023A7PS0219U)
+> **Technology Focus:** Node.js and Express backend, Puppeteer PDF generation, React frontend
+> **Status:** Draft for review
+
+---
+
+## 1. Technical Overview
+
+Module 3 is designed as a report generation and presentation module.
+
+On the backend it runs a small Node.js and Express service that exposes report endpoints to the React frontend. It reads structured compliance data prepared by Module 2, binds that data into an HTML report template, and uses Puppeteer to render the template into a PDF document. The PDF is stored in object storage and a reference is saved in the database.
+
+On the frontend it uses React with react-pdf to render the generated report inline, along with download and print actions.
+
+The module performs:
+
+- Report request handling
+- Validation and authorization
+- Data reading from Module 2
+- Template binding
+- PDF rendering with Puppeteer
+- Storage and metadata recording
+- Status reporting
+- Inline rendering in React
+
+---
+
+## 2. Technical Scope
+
+### Included
+
+- Express report routes and controllers
+- Request validation
+- Report orchestration service
+- HTML template engine integration
+- Puppeteer PDF rendering
+- Object storage access
+- Report metadata tables
+- React report dashboard and viewer
+- Unit and integration tests
+- Dev Container execution
+
+### Excluded
+
+- Creation of source business data
+- Authentication implementation
+- Browser side PDF editing
+- Direct PARIVESH integration
+- Long term archival policy
+
+---
+
+## 3. Technology Stack
+
+| Area | Technology | Purpose |
+|---|---|---|
+| Backend runtime | Node.js with Express | Expose report endpoints and orchestrate generation |
+| PDF rendering | Puppeteer | Render HTML report templates into PDF |
+| Templating | HTML template engine | Bind compliance data into report layouts |
+| Database | PostgreSQL | Store report request and generated report metadata |
+| Storage | Object storage (S3 compatible) | Store generated PDF files |
+| Frontend | React with react-pdf | Request reports and render PDFs inline |
+| Container | Docker Dev Container | Reproducible environment |
+| Testing | Jest and integration tests | Unit and integration testing |
+
+---
+
+## 4. Technical Architecture
+
+```mermaid
+flowchart TB
+    subgraph Frontend
+        DASH[Report Dashboard]
+        VIEW[React PDF Viewer]
+    end
+
+    subgraph Module_3_Backend
+        API[Express Routes and Controllers]
+        VAL[Validation and Authorization]
+        SVC[Report Service]
+        TMP[Template Engine]
+        PDF[Puppeteer PDF Generator]
+        REPO[Report Repository]
+        STG[Storage Client]
+    end
+
+    subgraph Storage_and_Sources
+        M2[(Module 2 Structured Data)]
+        DB[(PostgreSQL Metadata)]
+        OBJ[(Object Storage)]
+    end
+
+    DASH --> API
+    API --> VAL
+    VAL --> SVC
+    SVC --> M2
+    SVC --> TMP
+    TMP --> PDF
+    PDF --> STG
+    STG --> OBJ
+    SVC --> REPO
+    REPO --> DB
+    OBJ --> VIEW
+```
+
+---
+
+## 5. Design Principles
+
+### 5.1 Separation of Responsibilities
+
+Data reading, template binding, PDF rendering, storage, and display are separate units with defined interfaces.
+
+### 5.2 Report Type Agnostic Pipeline
+
+The pipeline does not change per report type. A report type is a template plus a query.
+
+### 5.3 Asynchronous Generation
+
+A report request returns immediately with a status so the frontend stays responsive.
+
+### 5.4 Reuse of the Browser Instance
+
+A single Puppeteer browser is reused across requests because launching is the dominant cost.
+
+### 5.5 Traceability
+
+Every generated report records the template version used, so an old report can be explained.
+
+---
+
+## 6. Proposed Folder Structure
+
+```text
+module3/
+├── api/
+│   ├── reportRoutes.js
+│   ├── reportController.js
+│   └── validators.js
+├── services/
+│   ├── reportService.js
+│   ├── templateService.js
+│   └── pdfService.js
+├── data/
+│   ├── reportRepository.js
+│   └── complianceRepository.js
+├── storage/
+│   └── objectStorage.js
+├── templates/
+│   ├── base.html
+│   └── compliance_report.html
+├── utils/
+│   ├── logger.js
+│   └── errors.js
+└── tests/
+    ├── unit/
+    └── integration/
+
+frontend/src/module3/
+├── ReportDashboard.jsx
+├── ReportViewer.jsx
+├── ReportStatus.jsx
+└── api/reportApi.js
+```
+
+This is a proposed structure and should be adjusted to the final MACE repository.
+
+---
+
+## 7. Main Components
+
+### 7.1 Report Controller
+
+```javascript
+async function requestReport(req, res) {
+  // validate payload, authorize user,
+  // create request, trigger generation,
+  // return 202 with request id
+}
+```
+
+### 7.2 Report Service
+
+```javascript
+async function generateReport(requestId) {
+  // read compliance data
+  // bind template
+  // render pdf
+  // store file
+  // update status
+}
+```
+
+### 7.3 Template Service
+
+```javascript
+function renderTemplate(templateCode, data) {
+  // return populated HTML string
+}
+```
+
+### 7.4 PDF Service
+
+```javascript
+async function htmlToPdf(html) {
+  // render HTML in headless browser
+  // return PDF buffer
+}
+```
+
+### 7.5 Report Repository
+
+```javascript
+async function createRequest(request) { /* ... */ }
+async function updateStatus(requestId, status) { /* ... */ }
+async function saveGeneratedReport(report) { /* ... */ }
+```
+
+---
+
+## 8. Processing Sequence
+
+```mermaid
+sequenceDiagram
+    participant FE as React Frontend
+    participant API as Express API
+    participant SVC as Report Service
+    participant M2 as Module 2 Data
+    participant PDF as Puppeteer
+    participant ST as Object Storage
+    participant DB as PostgreSQL
+
+    FE->>API: POST report request
+    API->>API: Validate and authorize
+    API->>DB: Create request (generating)
+    API-->>FE: 202 Accepted with request id
+    API->>SVC: Start generation
+    SVC->>M2: Read structured data
+    M2-->>SVC: Compliance sections
+    SVC->>PDF: Render bound template
+    PDF-->>SVC: PDF buffer
+    SVC->>ST: Upload PDF
+    ST-->>SVC: Storage key and URL
+    SVC->>DB: Update request (ready)
+    FE->>API: GET report status
+    API-->>FE: Ready with file URL
+    FE->>ST: Load PDF into viewer
+```
+
+---
+
+## 9. Internal Data Models
+
+### Report Request Model
+
+```javascript
+const ReportRequest = {
+  requestId: "uuid",
+  projectId: "uuid",
+  templateCode: "string",
+  requestedBy: "string",
+  status: "generating | ready | failed",
+  errorMessage: "string | null"
+};
+```
+
+### Generated Report Model
+
+```javascript
+const GeneratedReport = {
+  reportId: "uuid",
+  requestId: "uuid",
+  storageKey: "string",
+  fileUrl: "string",
+  fileSizeBytes: 0,
+  pageCount: 0,
+  templateVersion: "string"
+};
+```
+
+---
+
+## 10. Database Design
+
 ### Report Template Table
 
 | Field | Type |
@@ -2997,81 +3287,9 @@ No internal stack trace should be shown to normal users. Each failure is recorde
 
 ## 17. Logging and Audit
 
-
 Suggested log information:
 
 - Timestamp
-
-- Project ID
-- Processing step
-- Number of records
-- Error count
-- Warning count
-- Final status
-- Processing duration
-
-Audit events:
-
-- Data imported
-- Data corrected
-- Project reprocessed
-- Validation status changed
-- Compliance sections generated
-- Approved data modified
-
----
-
-## 21. Performance Considerations
-
-- Process records in batches.
-- Avoid one database query per row.
-- Use bulk insert where appropriate.
-- Add database indexes.
-- Cache stable reference values.
-- Avoid reading the same file repeatedly.
-- Use asynchronous database sessions.
-- Support future background processing for large files.
-
----
-
-## 22. Database Migrations
-
-Alembic should manage:
-
-1. Project table
-2. Environmental observation table
-3. Validation result table
-4. Compliance section table
-5. Section item table
-6. Foreign keys
-7. Indexes
-8. Reference data tables if required
-
-No real client data should be stored in migration files.
-
----
-
-## 23. Testing Strategy
-
-### Unit Tests
-
-- Required-field validation
-- Positive number validation
-- Date normalization
-- Unit normalization
-- Duplicate detection
-- Classification
-- Mapping
-- Processing-status calculation
-
-### Integration Tests
-
-- File reading to database storage
-- Shared database input processing
-- Transaction rollback
-- Reprocessing
-- Module 3 data retrieval
-
 - Request id
 - Report type and template version
 - Pipeline stage
@@ -3108,26 +3326,10 @@ Audit events:
 - Retry of a failed request
 - Frontend rendering, download, and failed states
 
-
 ### Test Cases
 
 | ID | Test | Expected Result |
 |---|---|---|
-| TC-01 | Valid project | Processed and stored |
-| TC-02 | Missing project name | Validation error |
-| TC-03 | Negative lease area | Validation error |
-| TC-04 | Unsupported unit | Warning or error |
-| TC-05 | Duplicate observation | Duplicate flagged |
-| TC-06 | Missing optional data | Ready with warning |
-| TC-07 | Database failure | Rollback |
-| TC-08 | Invalid file format | Controlled error |
-| TC-09 | Valid structured data | Module 3 can read it |
-| TC-10 | Critical errors present | Downstream use blocked |
-
----
-
-## 24. Dev Container and Setup
-
 | TC-01 | Valid request with complete data | Accepted, then ready with a working URL |
 | TC-02 | Missing template code | Validation error, no request created |
 | TC-03 | Non-existent project | Error, no generation attempted |
@@ -3145,28 +3347,9 @@ Audit events:
 
 ## 19. Dev Container and Setup
 
-
 Expected dependencies:
 
 ```text
-
-pydantic
-sqlalchemy
-alembic
-psycopg2-binary
-asyncpg
-pytest
-pandas
-openpyxl
-```
-
-Example environment variable:
-
-```env
-DATABASE_URL=postgresql+asyncpg://user:password@host:5432/database
-```
-
-
 express
 puppeteer
 pg
@@ -3189,7 +3372,6 @@ REPORT_URL_TTL_SECONDS=900
 
 Puppeteer needs headless browser libraries installed in the Dev Container image. If they are missing, the browser fails to launch and every generation fails at the same point. This is the most common setup issue for this module.
 
-
 Development checks:
 
 ```bash
@@ -3197,42 +3379,6 @@ python3 -m pip check
 npm ls --depth=0
 ss -tulnp | egrep ':(8000|5173|5432)'
 ```
-
-
-Module 2 itself does not require port 8000 because it does not expose an API.
-
----
-
-## 25. Risks and Mitigation
-
-| Risk | Mitigation |
-|---|---|
-| Input format changes | Use separate readers |
-| Missing data | Structured validation |
-| Duplicate records | Duplicate checks and indexes |
-| Wrong mapping | Preserve source and require review |
-| Database failure | Transactions and rollback |
-| Rule changes | Keep rules modular |
-| Large files | Batch processing |
-| Secret exposure | Environment variables and safe logs |
-| Module mismatch | Shared internal data contract |
-
----
-
-## 26. Technical Acceptance Criteria
-
-1. No API-based dependency exists.
-2. Data can be read from approved files or shared database tables.
-3. Internal Python models are defined.
-4. Validation returns structured issues.
-5. Normalization is deterministic.
-6. Classification is testable.
-7. Mapping is testable.
-8. Database changes use transactions.
-9. Source references are preserved.
-10. Alembic migrations are available.
-11. Unit and integration tests pass.
-12. Module 3 can read structured output.
 
 ---
 
@@ -3265,24 +3411,11 @@ Module 2 itself does not require port 8000 because it does not expose an API.
 10. Download and print work correctly.
 11. Report metadata records requester and template version.
 12. Unit and integration tests pass.
-
 13. Secrets are not committed.
 14. The module runs in the Dev Container.
 15. Mermaid diagrams render correctly on GitHub.
 
 ---
-
-
-## 27. Future Technical Improvements
-
-- Configurable validation-rule files
-- Additional file readers
-- Background processing
-- Versioned project records
-- Reviewer approval workflow
-- Reference-data caching
-- Processing metrics
-- More sectors beyond mining
 
 ## 22. Future Technical Improvements
 
